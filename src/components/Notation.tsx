@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Renderer, Stave, Voice, Formatter, StaveConnector } from 'vexflow'
+import { Renderer, Stave, Voice, Formatter, StaveConnector, Tuplet } from 'vexflow'
 import type { LickNote } from '@/types/lick'
 import { buildStaveNotes } from '@/lib/notation'
 
@@ -39,18 +39,23 @@ export function Notation({ notes, beats, timeSignature }: Props) {
       new StaveConnector(treble, bass).setType('singleLeft').setContext(ctx).draw()
 
       const mkVoice = (hand: 'R' | 'L', stave: Stave) => {
+        const { notes: staveNotes, tuplets } = buildStaveNotes(notes, hand, beats)
+        const tupletObjs = tuplets.map((g) => new Tuplet(g))
         const v = new Voice({ num_beats: beats, beat_value: 4 }).setStrict(false)
-        v.addTickables(buildStaveNotes(notes, hand, beats))
+        v.addTickables(staveNotes)
         new Formatter().joinVoices([v]).format([v], staveW - 60)
         v.draw(ctx, stave)
+        tupletObjs.forEach((t) => t.setContext(ctx).draw())
       }
       mkVoice('R', treble)
       mkVoice('L', bass)
 
-      // Recolor everything for the dark scene (VexFlow draws black by default).
-      host.querySelectorAll<SVGElement>('svg *').forEach((el) => {
+      // Recolor everything for the dark scene (VexFlow draws black by default,
+      // and leaves many glyphs to inherit — so fill in even when the attribute
+      // is absent, but never override an explicit fill:none, e.g. tuplet brackets).
+      host.querySelectorAll<SVGElement>('svg path, svg text, svg rect, svg g').forEach((el) => {
         const f = el.getAttribute('fill')
-        if (f && f !== 'none') el.setAttribute('fill', IVORY)
+        if (f !== 'none') el.setAttribute('fill', IVORY)
         const s = el.getAttribute('stroke')
         if (s && s !== 'none') el.setAttribute('stroke', IVORY)
       })

@@ -1,4 +1,4 @@
-import { Renderer, Stave, Voice, Formatter, StaveConnector } from 'vexflow'
+import { Renderer, Stave, Voice, Formatter, StaveConnector, Tuplet } from 'vexflow'
 import type { Lick } from '@/types/lick'
 import { transposedNotes } from './transpose'
 import { buildStaveNotes } from './notation'
@@ -27,10 +27,13 @@ function renderSvg(lick: Lick, targetKey: number): string {
     new StaveConnector(treble, bass).setType('brace').setContext(ctx).draw()
     new StaveConnector(treble, bass).setType('singleLeft').setContext(ctx).draw()
     for (const [hand, stave] of [['R', treble], ['L', bass]] as const) {
+      const { notes: staveNotes, tuplets } = buildStaveNotes(notes, hand, lick.beats)
+      const tupletObjs = tuplets.map((g) => new Tuplet(g))
       const v = new Voice({ num_beats: lick.beats, beat_value: 4 }).setStrict(false)
-      v.addTickables(buildStaveNotes(notes, hand, lick.beats))
+      v.addTickables(staveNotes)
       new Formatter().joinVoices([v]).format([v], staveW - 60)
       v.draw(ctx, stave)
+      tupletObjs.forEach((t) => t.setContext(ctx).draw())
     }
     return host.querySelector('svg')?.outerHTML ?? ''
   } finally {
