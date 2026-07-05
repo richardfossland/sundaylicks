@@ -42,6 +42,24 @@ class PlaybackEngine {
   private raf: number | null = null
   private totalBeats = 0
   private endEvent: number | null = null
+  private metro: Tone.MembraneSynth | null = null
+  private metroId: number | null = null
+
+  private ensureMetro(): Tone.MembraneSynth {
+    if (!this.metro) {
+      this.metro = new Tone.MembraneSynth({
+        octaves: 1.5,
+        pitchDecay: 0.008,
+        envelope: { attack: 0.001, decay: 0.06, sustain: 0, release: 0.02 },
+      }).toDestination()
+      this.metro.volume.value = -6
+    }
+    return this.metro
+  }
+
+  private click(time: number, accent: boolean) {
+    this.ensureMetro().triggerAttackRelease(accent ? 'C6' : 'G5', '32n', time, accent ? 0.9 : 0.5)
+  }
 
   private async ensureSampler(): Promise<Tone.Sampler> {
     if (this.sampler) return this.sampler
@@ -126,7 +144,26 @@ class PlaybackEngine {
   async play() {
     await Tone.start()
     await this.ensureSampler()
-    Tone.Transport.start()
+
+    // Optional one-bar count-in before the transport starts.
+    const now = Tone.now()
+    const spb = 60 / Tone.Transport.bpm.value
+    let startTime = now
+    if (usePlayer.getState().countIn) {
+      for (let i = 0; i < 4; i++) this.click(now + i * spb, i === 0)
+      startTime = now + 4 * spb
+    }
+
+    // Metronome: one scheduled repeat, gated live on the store flag so toggling
+    // during playback takes effect immediately. Accent the downbeat of each bar.
+    if (this.metroId !== null) Tone.Transport.clear(this.metroId)
+    this.metroId = Tone.Transport.scheduleRepeat((time) => {
+      if (!usePlayer.getState().metronome) return
+      const beat = Math.round(Tone.Transport.getTicksAtTime(time) / Tone.Transport.PPQ)
+      this.click(time, beat % 4 === 0)
+    }, '4n', 0)
+
+    Tone.Transport.start(startTime)
     usePlayer.getState().set({ isPlaying: true })
     this.tick()
   }
@@ -134,6 +171,10 @@ class PlaybackEngine {
   stop() {
     Tone.Transport.stop()
     Tone.Transport.position = 0
+    if (this.metroId !== null) {
+      Tone.Transport.clear(this.metroId)
+      this.metroId = null
+    }
     if (this.raf !== null) cancelAnimationFrame(this.raf)
     this.raf = null
     usePlayer.getState().set({ isPlaying: false, currentBeat: 0 })

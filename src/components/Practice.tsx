@@ -14,6 +14,7 @@ import { CATEGORY_LABEL, GENRE_LABEL, DIFFICULTY_LABEL, difficultyDots } from '@
 import { parseShare, buildShare } from '@/lib/share'
 import { recordPractice } from '@/lib/progress'
 import { useCollections } from '@/lib/collections'
+import { CURATED_PATHS } from '@/data/curated-paths'
 import { useWaitMode } from '@/lib/useWaitMode'
 import { connectMidi, midiSupported, type MidiConnection } from '@/lib/midi'
 import { cn } from '@/lib/cn'
@@ -24,6 +25,7 @@ import { ChordStrip } from './ChordStrip'
 import { TransportBar } from './TransportBar'
 import { FavoriteButton } from './FavoriteButton'
 import { AddToListButton } from './AddToListButton'
+import { ExportButton } from './ExportButton'
 
 type View = 'roll' | 'notation'
 
@@ -40,7 +42,7 @@ export function Practice({ slug }: { slug: string }) {
   const [practiceOn, setPracticeOn] = useState(false)
   const [midi, setMidi] = useState<MidiConnection | null>(null)
   const [midiError, setMidiError] = useState<string | null>(null)
-  const [listCtx, setListCtx] = useState<{ id: string; index: number } | null>(null)
+  const [listCtx, setListCtx] = useState<{ kind: 'list' | 'path'; id: string; index: number } | null>(null)
 
   const router = useRouter()
   const loadCollections = useCollections((s) => s.load)
@@ -49,6 +51,8 @@ export function Practice({ slug }: { slug: string }) {
   const isPlaying = usePlayer((s) => s.isPlaying)
   const isLoading = usePlayer((s) => s.isLoading)
   const currentBeat = usePlayer((s) => s.currentBeat)
+  const metronome = usePlayer((s) => s.metronome)
+  const countIn = usePlayer((s) => s.countIn)
 
   // Live values the rebuild effect reads without re-triggering on their change.
   const bpmRef = useRef(bpm)
@@ -66,7 +70,11 @@ export function Practice({ slug }: { slug: string }) {
       const q = new URLSearchParams(window.location.search)
       const share = parseShare(window.location.search)
       const listId = q.get('list')
-      setListCtx(listId ? { id: listId, index: Number(q.get('i') ?? 0) || 0 } : null)
+      const pathId = q.get('path')
+      const index = Number(q.get('i') ?? 0) || 0
+      setListCtx(
+        listId ? { kind: 'list', id: listId, index } : pathId ? { kind: 'path', id: pathId, index } : null,
+      )
       setLick(l)
       setTargetKey(share.key ?? l.original_key)
       setBpm(share.bpm ?? l.default_bpm)
@@ -83,7 +91,7 @@ export function Practice({ slug }: { slug: string }) {
   useEffect(() => {
     if (!syncedRef.current) return
     const qs = buildShare({ key: targetKey, bpm, hand })
-    const extra = listCtx ? `&list=${listCtx.id}&i=${listCtx.index}` : ''
+    const extra = listCtx ? `&${listCtx.kind}=${listCtx.id}&i=${listCtx.index}` : ''
     window.history.replaceState(null, '', `${window.location.pathname}?${qs}${extra}`)
   }, [targetKey, bpm, hand, listCtx])
 
@@ -203,11 +211,15 @@ export function Practice({ slug }: { slug: string }) {
     }
   }
 
-  const navList = listCtx ? lists.find((l) => l.id === listCtx.id) : null
+  const navList = listCtx
+    ? listCtx.kind === 'path'
+      ? (CURATED_PATHS.find((p) => p.id === listCtx.id) ?? null)
+      : (lists.find((l) => l.id === listCtx.id) ?? null)
+    : null
   const goTo = (idx: number) => {
-    if (!navList) return
+    if (!navList || !listCtx) return
     const s = navList.slugs[idx]
-    if (s) router.push(`/lick/${s}?list=${navList.id}&i=${idx}`)
+    if (s) router.push(`/lick/${s}?${listCtx.kind}=${listCtx.id}&i=${idx}`)
   }
 
   return (
@@ -288,13 +300,16 @@ export function Practice({ slug }: { slug: string }) {
               Noter
             </ViewTab>
           </div>
-          <button
-            onClick={onShare}
-            className="flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ivory)]"
-          >
-            {copied ? <Check className="h-4 w-4 text-[var(--color-sea)]" /> : <Share2 className="h-4 w-4" />}
-            {copied ? 'Kopiert' : 'Del'}
-          </button>
+          <div className="flex items-center gap-2">
+            <ExportButton lick={lick} targetKey={targetKey} bpm={bpm} />
+            <button
+              onClick={onShare}
+              className="flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ivory)]"
+            >
+              {copied ? <Check className="h-4 w-4 text-[var(--color-sea)]" /> : <Share2 className="h-4 w-4" />}
+              {copied ? 'Kopiert' : 'Del'}
+            </button>
+          </div>
         </div>
 
         {view === 'roll' ? (
@@ -364,6 +379,10 @@ export function Practice({ slug }: { slug: string }) {
           onLoopToggle={onLoopToggle}
           ramp={ramp}
           onRampToggle={() => setRamp((v) => !v)}
+          metronome={metronome}
+          onMetronomeToggle={() => usePlayer.getState().set({ metronome: !usePlayer.getState().metronome })}
+          countIn={countIn}
+          onCountInToggle={() => usePlayer.getState().set({ countIn: !usePlayer.getState().countIn })}
           bpm={bpm}
           defaultBpm={lick.default_bpm}
           onBpm={onBpm}

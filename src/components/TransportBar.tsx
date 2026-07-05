@@ -1,6 +1,6 @@
 'use client'
 
-import { Play, Square, Repeat, Loader2, TrendingUp } from 'lucide-react'
+import { Play, Square, Repeat, Loader2, TrendingUp, Timer, Hash } from 'lucide-react'
 import type { HandFilter } from '@/types/lick'
 import { KEY_NAMES } from '@/lib/music'
 import { cn } from '@/lib/cn'
@@ -13,6 +13,10 @@ interface Props {
   onLoopToggle: () => void
   ramp: boolean
   onRampToggle: () => void
+  metronome: boolean
+  onMetronomeToggle: () => void
+  countIn: boolean
+  onCountInToggle: () => void
   bpm: number
   defaultBpm: number
   onBpm: (bpm: number) => void
@@ -73,6 +77,34 @@ export function TransportBar(p: Props) {
           )}
         >
           <TrendingUp className="h-4 w-4" /> Trapp opp
+        </button>
+
+        <button
+          onClick={p.onMetronomeToggle}
+          aria-pressed={p.metronome}
+          title="Metronom-klikk på hvert slag"
+          className={cn(
+            'flex h-11 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors',
+            p.metronome
+              ? 'border-[var(--color-sea)] bg-[var(--color-sea)]/15 text-[var(--color-sea)]'
+              : 'border-[var(--color-border)] text-[var(--color-muted)]',
+          )}
+        >
+          <Timer className="h-4 w-4" /> Metronom
+        </button>
+
+        <button
+          onClick={p.onCountInToggle}
+          aria-pressed={p.countIn}
+          title="Tell inn én takt før avspilling"
+          className={cn(
+            'flex h-11 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors',
+            p.countIn
+              ? 'border-[var(--color-sea)] bg-[var(--color-sea)]/15 text-[var(--color-sea)]'
+              : 'border-[var(--color-border)] text-[var(--color-muted)]',
+          )}
+        >
+          <Hash className="h-4 w-4" /> Tell inn
         </button>
 
         <div className="flex min-w-[220px] flex-1 items-center gap-3">

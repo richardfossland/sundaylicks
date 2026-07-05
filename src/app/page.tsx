@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Plus, Heart, Play, Trash2, ListMusic } from 'lucide-react'
+import { Plus, Heart, Play, Trash2, ListMusic, Search } from 'lucide-react'
 import type { Lick, Category, Genre, Difficulty } from '@/types/lick'
 import { FALLBACK_LICKS, fetchLicks } from '@/lib/licks'
 import { getProgress, type Progress } from '@/lib/progress'
 import { useCollections } from '@/lib/collections'
+import { CURATED_PATHS } from '@/data/curated-paths'
 import { LickCard } from '@/components/LickCard'
+import { PathCard } from '@/components/PathCard'
 import { CATEGORY_LABEL, CATEGORY_ORDER, GENRE_LABEL, GENRE_ORDER, DIFFICULTY_LABEL } from '@/lib/labels'
 import { cn } from '@/lib/cn'
 
@@ -15,6 +17,16 @@ type CatFilter = Category | 'all'
 type GenreFilter = Genre | 'all'
 type DiffFilter = Difficulty | 'all'
 type Mode = 'all' | 'favs' | string // string = list id
+type SortKey = 'default' | 'name' | 'difficulty' | 'bpm' | 'beats' | 'newest'
+
+const SORTS: { key: SortKey; label: string }[] = [
+  { key: 'default', label: 'Standard' },
+  { key: 'name', label: 'Navn' },
+  { key: 'difficulty', label: 'Nivå' },
+  { key: 'bpm', label: 'Tempo' },
+  { key: 'beats', label: 'Lengde' },
+  { key: 'newest', label: 'Nyeste' },
+]
 
 export default function LibraryPage() {
   const [licks, setLicks] = useState<Lick[]>(FALLBACK_LICKS)
@@ -22,6 +34,8 @@ export default function LibraryPage() {
   const [genre, setGenre] = useState<GenreFilter>('all')
   const [diff, setDiff] = useState<DiffFilter>('all')
   const [mode, setMode] = useState<Mode>('all')
+  const [query, setQuery] = useState('')
+  const [sort, setSort] = useState<SortKey>('default')
   const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {} })
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
@@ -63,14 +77,29 @@ export default function LibraryPage() {
     if (activeList) {
       return activeList.slugs.map((s) => bySlug.get(s)).filter(Boolean) as Lick[]
     }
-    return licks.filter(
+    const q = query.trim().toLowerCase()
+    const idx = new Map(licks.map((l, i) => [l.slug, i]))
+    const out = licks.filter(
       (l) =>
         (mode !== 'favs' || favorites.includes(l.slug)) &&
         (cat === 'all' || l.category === cat) &&
         (genre === 'all' || l.genre === genre) &&
-        (diff === 'all' || l.difficulty === diff),
+        (diff === 'all' || l.difficulty === diff) &&
+        (q === '' ||
+          l.name.toLowerCase().includes(q) ||
+          (l.description ?? '').toLowerCase().includes(q) ||
+          l.tags.some((t) => t.toLowerCase().includes(q))),
     )
-  }, [licks, activeList, mode, favorites, cat, genre, diff, bySlug])
+    const cmp: Record<SortKey, (a: Lick, b: Lick) => number> = {
+      default: (a, b) => (idx.get(a.slug)! - idx.get(b.slug)!),
+      name: (a, b) => a.name.localeCompare(b.name, 'no'),
+      difficulty: (a, b) => a.difficulty - b.difficulty || a.name.localeCompare(b.name, 'no'),
+      bpm: (a, b) => a.default_bpm - b.default_bpm,
+      beats: (a, b) => a.beats - b.beats,
+      newest: (a, b) => (idx.get(b.slug)! - idx.get(a.slug)!),
+    }
+    return [...out].sort(cmp[sort])
+  }, [licks, activeList, mode, favorites, cat, genre, diff, query, sort, bySlug])
 
   const startCreate = () => {
     const id = createList(newName)
@@ -143,6 +172,31 @@ export default function LibraryPage() {
       {/* Filters (hidden in list mode — a list shows its whole contents) */}
       {!activeList && (
         <div className="mb-8 flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative min-w-[200px] flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted)]" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Søk i navn, tagger, beskrivelse…"
+                className="w-full rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] py-2 pl-9 pr-3 text-sm text-[var(--color-ivory)] outline-none focus:border-[var(--color-amber)]"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-[var(--color-muted)]">Sorter</span>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as SortKey)}
+                className="rounded-full border border-[var(--color-border)] bg-[var(--color-raised)] px-3 py-2 text-sm text-[var(--color-ivory)] outline-none focus:border-[var(--color-amber)]"
+              >
+                {SORTS.map((s) => (
+                  <option key={s.key} value={s.key}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
           <FilterRow label="Sjanger">
             <Chip active={genre === 'all'} onClick={() => setGenre('all')}>
               Alle
@@ -203,6 +257,18 @@ export default function LibraryPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Courses — shown on the default landing view only */}
+      {mode === 'all' && query === '' && cat === 'all' && genre === 'all' && diff === 'all' && (
+        <section className="mb-10">
+          <h2 className="mb-3 font-display text-2xl text-[var(--color-ivory)]">Kurs</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {CURATED_PATHS.map((p) => (
+              <PathCard key={p.id} path={p} practiced={progress.practiced} />
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Grid */}

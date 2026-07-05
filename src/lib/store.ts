@@ -8,12 +8,18 @@ interface PlayerState {
   isPlaying: boolean
   isLoading: boolean
   currentBeat: number
-  set: (patch: Partial<Pick<PlayerState, 'isPlaying' | 'isLoading' | 'currentBeat'>>) => void
+  metronome: boolean // click on every beat during playback
+  countIn: boolean // one bar of clicks before playback starts
+  set: (
+    patch: Partial<Pick<PlayerState, 'isPlaying' | 'isLoading' | 'currentBeat' | 'metronome' | 'countIn'>>,
+  ) => void
 }
 
 export const usePlayer = create<PlayerState>((set) => ({
   isPlaying: false,
   isLoading: false,
   currentBeat: 0,
+  metronome: false,
+  countIn: false,
   set: (patch) => set(patch),
 }))
