@@ -8,6 +8,7 @@ import type { Lick, HandFilter } from '@/types/lick'
 import { fetchLick } from '@/lib/licks'
 import { transposedNotes, transposedChords } from '@/lib/transpose'
 import { getEngine } from '@/lib/playback'
+import { installAudioUnlock } from '@/lib/audio-unlock'
 import { usePlayer } from '@/lib/store'
 import { KEY_NAMES } from '@/lib/music'
 import { CATEGORY_LABEL, GENRE_LABEL, DIFFICULTY_LABEL, difficultyDots } from '@/lib/labels'
@@ -109,8 +110,11 @@ export function Practice({ slug }: { slug: string }) {
     window.history.replaceState(null, '', `${window.location.pathname}?${qs}${extra}`)
   }, [targetKey, bpm, hand, listCtx])
 
-  // Dispose the audio engine when leaving the page.
-  useEffect(() => () => getEngine().dispose(), [])
+  // Install the iOS audio unlock on mount; dispose the engine on leave.
+  useEffect(() => {
+    installAudioUnlock()
+    return () => getEngine().dispose()
+  }, [])
 
   // (Re)build the Tone part whenever the notes change (lick / key / hand).
   // Tempo and loop change live and do NOT rebuild.

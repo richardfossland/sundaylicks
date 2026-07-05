@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Play, Square, Check, X, Loader2, ShieldCheck } from 'lucide-react'
 import type { Lick } from '@/types/lick'
 import { getEngine } from '@/lib/playback'
+import { installAudioUnlock } from '@/lib/audio-unlock'
 import { usePlayer } from '@/lib/store'
 import { KEY_NAMES } from '@/lib/music'
 import { CATEGORY_LABEL, DIFFICULTY_LABEL } from '@/lib/labels'
@@ -17,6 +18,7 @@ export function AdminPanel() {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [playingId, setPlayingId] = useState<string | null>(null)
   const isPlaying = usePlayer((s) => s.isPlaying)
+  useEffect(() => installAudioUnlock(), [])
 
   const headers = () => ({ 'content-type': 'application/json', 'x-admin-key': password })
 

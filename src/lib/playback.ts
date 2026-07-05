@@ -2,6 +2,7 @@ import * as Tone from 'tone'
 import type { Lick, HandFilter } from '@/types/lick'
 import { transposedNotes } from './transpose'
 import { usePlayer } from './store'
+import { ensureAudioRunning } from './audio-unlock'
 
 // ── Salamander piano sampler (lazy) ──────────────────────────────────────────
 // A subset of the Salamander Grand samples (every minor-3rd, A0–C8) hosted on
@@ -158,14 +159,16 @@ class PlaybackEngine {
 
   /** Trigger a single note now (click / MIDI feedback, wait-mode). */
   async playNote(midi: number, velocity = 0.8, durationSec = 0.6) {
-    await Tone.start()
+    await ensureAudioRunning()
     const sampler = await this.ensureSampler()
+    await ensureAudioRunning() // context can suspend during the async sampler load (iOS)
     sampler.triggerAttackRelease(Tone.Frequency(midi, 'midi').toFrequency(), durationSec, undefined, velocity)
   }
 
   async play() {
-    await Tone.start()
+    await ensureAudioRunning()
     await this.ensureSampler()
+    await ensureAudioRunning() // re-resume after the async load — iOS Safari suspends
 
     // Optional one-bar count-in before the transport starts.
     const now = Tone.now()

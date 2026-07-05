@@ -1,11 +1,12 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Play, Square, Trash2, Plus, Send, Loader2 } from 'lucide-react'
 import type { LickNote, LickChord, Category, Genre, Difficulty, Hand, Lick } from '@/types/lick'
 import { submissionSchema } from '@/lib/validation'
 import { getUserId } from '@/lib/identity'
 import { getEngine } from '@/lib/playback'
+import { installAudioUnlock } from '@/lib/audio-unlock'
 import { usePlayer } from '@/lib/store'
 import { KEY_NAMES, NOTE_NAMES, isBlackKey, pitchClass, noteName } from '@/lib/music'
 import { CATEGORY_LABEL, CATEGORY_ORDER, GENRE_LABEL, GENRE_ORDER, DIFFICULTY_LABEL } from '@/lib/labels'
@@ -48,6 +49,7 @@ export function LickEditor() {
   const [message, setMessage] = useState<string | null>(null)
 
   const isPlaying = usePlayer((s) => s.isPlaying)
+  useEffect(() => installAudioUnlock(), [])
 
   const steps = beats * 4
   const rows: number[] = []
