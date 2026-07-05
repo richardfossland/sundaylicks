@@ -13,8 +13,12 @@
     "enabled": true
   }
   // NEXT_PUBLIC_* are build-time inlined (set in .env.local before cf:build).
-  // No runtime Worker secret is needed: the app only ever READS published licks
-  // through the anon key + `read published` RLS policy. Seeding/admin writes use
-  // the service role via scripts/seed.mjs (run locally by the owner), never the
-  // deployed Worker.
+  //
+  // Reads (bibliotek + øving) need NO secret — anon key + `read published` RLS.
+  //
+  // Fase 4 write paths DO need runtime Worker secrets (set with `wrangler secret put`):
+  //   - SUPABASE_SERVICE_ROLE_KEY — used by /api/submit + /api/admin/licks to write
+  //     with elevated rights so the table stays locked to anon reads (RLS unchanged).
+  //   - ADMIN_PASSWORD — gates the /admin moderation page.
+  // Until these are set, /api/submit and /api/admin/licks return 503 (reads still work).
 }

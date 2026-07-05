@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { Plus } from 'lucide-react'
 import type { Lick, Category, Difficulty } from '@/types/lick'
 import { FALLBACK_LICKS, fetchLicks } from '@/lib/licks'
 import { getProgress, type Progress } from '@/lib/progress'
@@ -44,12 +46,20 @@ export default function LibraryPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:py-12">
-      <header className="mb-8">
-        <h1 className="font-display text-4xl text-[var(--color-ivory)] sm:text-5xl">SundayLicks</h1>
-        <p className="mt-2 max-w-xl text-[var(--color-muted)]">
-          Øv gospel- og lovsang-licks med opplyst klaviatur, live tempo og transponering til alle
-          tonearter. Alt spilles fra noter — aldri lyd — så det aldri knirker.
-        </p>
+      <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-4xl text-[var(--color-ivory)] sm:text-5xl">SundayLicks</h1>
+          <p className="mt-2 max-w-xl text-[var(--color-muted)]">
+            Øv gospel- og lovsang-licks med opplyst klaviatur, live tempo og transponering til alle
+            tonearter. Alt spilles fra noter — aldri lyd — så det aldri knirker.
+          </p>
+        </div>
+        <Link
+          href="/submit"
+          className="flex shrink-0 items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm text-[var(--color-ivory)] transition-colors hover:border-[var(--color-amber)]/60"
+        >
+          <Plus className="h-4 w-4" /> Send inn en lick
+        </Link>
       </header>
 
       {/* Filters */}

@@ -19,40 +19,53 @@ export const chordSchema = z.object({
   b: z.number().int().min(0).max(11).optional(),
 })
 
-export const seedLickSchema = z
-  .object({
-    slug: z.string().regex(/^[a-z0-9-]+$/, 'slug må være kebab-case'),
-    name: z.string().min(1),
-    description: z.string().nullable(),
-    category: z.enum(['turnaround', 'two-five-one', 'run', 'fill', 'ending', 'intro']),
-    difficulty: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-    original_key: z.number().int().min(0).max(11),
-    default_bpm: z.number().int().min(20).max(300),
-    beats: z.number().positive(),
-    time_signature: z.string().regex(/^\d+\/\d+$/),
-    notes: z.array(noteSchema).min(1),
-    chords: z.array(chordSchema),
-    tags: z.array(z.string()),
+// Shared musical content (everything except the DB-owned slug/status/etc).
+export const lickContent = z.object({
+  name: z.string().min(1).max(80),
+  description: z.string().max(400).nullable(),
+  category: z.enum(['turnaround', 'two-five-one', 'run', 'fill', 'ending', 'intro']),
+  difficulty: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  original_key: z.number().int().min(0).max(11),
+  default_bpm: z.number().int().min(20).max(300),
+  beats: z.number().positive(),
+  time_signature: z.string().regex(/^\d+\/\d+$/),
+  notes: z.array(noteSchema).min(1),
+  chords: z.array(chordSchema),
+  tags: z.array(z.string()),
+})
+
+// t + d must stay within `beats`, for both notes and chords.
+const refineWithinBeats = (
+  lick: { beats: number; notes: { t: number; d: number }[]; chords: { t: number; d: number }[] },
+  ctx: z.RefinementCtx,
+) => {
+  lick.notes.forEach((n, i) => {
+    if (n.t + n.d > lick.beats + 1e-6) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['notes', i],
+        message: `note ${i} (t=${n.t}, d=${n.d}) går forbi beats=${lick.beats}`,
+      })
+    }
   })
-  .superRefine((lick, ctx) => {
-    lick.notes.forEach((n, i) => {
-      if (n.t + n.d > lick.beats + 1e-6) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['notes', i],
-          message: `note ${i} (t=${n.t}, d=${n.d}) går forbi beats=${lick.beats}`,
-        })
-      }
-    })
-    lick.chords.forEach((c, i) => {
-      if (c.t + c.d > lick.beats + 1e-6) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['chords', i],
-          message: `akkord ${i} (t=${c.t}, d=${c.d}) går forbi beats=${lick.beats}`,
-        })
-      }
-    })
+  lick.chords.forEach((c, i) => {
+    if (c.t + c.d > lick.beats + 1e-6) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['chords', i],
+        message: `akkord ${i} (t=${c.t}, d=${c.d}) går forbi beats=${lick.beats}`,
+      })
+    }
   })
+}
+
+// Full seed lick (author-provided slug required). Used by the seed script.
+export const seedLickSchema = lickContent
+  .extend({ slug: z.string().regex(/^[a-z0-9-]+$/, 'slug må være kebab-case') })
+  .superRefine(refineWithinBeats)
+
+// User submission (no slug — the server generates one). Used by /api/submit.
+export const submissionSchema = lickContent.superRefine(refineWithinBeats)
 
 export type ValidatedSeedLick = z.infer<typeof seedLickSchema>
+export type LickSubmission = z.infer<typeof lickContent>
