@@ -1,0 +1,58 @@
+import { z } from 'zod'
+
+// Strict validation for lick data at seed / submission time. PLAN §7:
+//   t ≥ 0, d > 0, p in 21–108 (A0–C8), t + d ≤ beats.
+
+export const noteSchema = z.object({
+  p: z.number().int().min(21).max(108),
+  t: z.number().min(0),
+  d: z.number().positive(),
+  h: z.enum(['L', 'R']),
+  v: z.number().min(0).max(1).optional(),
+})
+
+export const chordSchema = z.object({
+  t: z.number().min(0),
+  d: z.number().positive(),
+  r: z.number().int().min(0).max(11),
+  q: z.string(),
+  b: z.number().int().min(0).max(11).optional(),
+})
+
+export const seedLickSchema = z
+  .object({
+    slug: z.string().regex(/^[a-z0-9-]+$/, 'slug må være kebab-case'),
+    name: z.string().min(1),
+    description: z.string().nullable(),
+    category: z.enum(['turnaround', 'two-five-one', 'run', 'fill', 'ending', 'intro']),
+    difficulty: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+    original_key: z.number().int().min(0).max(11),
+    default_bpm: z.number().int().min(20).max(300),
+    beats: z.number().positive(),
+    time_signature: z.string().regex(/^\d+\/\d+$/),
+    notes: z.array(noteSchema).min(1),
+    chords: z.array(chordSchema),
+    tags: z.array(z.string()),
+  })
+  .superRefine((lick, ctx) => {
+    lick.notes.forEach((n, i) => {
+      if (n.t + n.d > lick.beats + 1e-6) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['notes', i],
+          message: `note ${i} (t=${n.t}, d=${n.d}) går forbi beats=${lick.beats}`,
+        })
+      }
+    })
+    lick.chords.forEach((c, i) => {
+      if (c.t + c.d > lick.beats + 1e-6) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['chords', i],
+          message: `akkord ${i} (t=${c.t}, d=${c.d}) går forbi beats=${lick.beats}`,
+        })
+      }
+    })
+  })
+
+export type ValidatedSeedLick = z.infer<typeof seedLickSchema>

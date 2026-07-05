@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+:root {
+  /* Warm "scene" palette — the lit keyboard is the signature. PLAN §5. */
+  --color-scene:   #171210; /* deep warm background */
+  --color-surface: #211913; /* cards / panels */
+  --color-raised:  #2C221A; /* raised controls */
+  --color-border:  #3A2D22;
+  --color-ivory:   #F3EAD9; /* white keys / text */
+  --color-muted:   #A99C87;
+  --color-amber:   #E8A33D; /* right hand */
+  --color-sea:     #5FB3A1; /* left hand */
+  --color-black-key: #17110C;
+}
+
+@theme inline {
+  --font-sans: var(--font-instrument), system-ui, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --color-scene: var(--color-scene);
+  --color-surface: var(--color-surface);
+  --color-raised: var(--color-raised);
+  --color-border: var(--color-border);
+  --color-ivory: var(--color-ivory);
+  --color-muted: var(--color-muted);
+  --color-amber: var(--color-amber);
+  --color-sea: var(--color-sea);
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
+/* Horizontal scroll containers (keyboard, piano roll) on mobile. */
+.scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fade-in 0.3s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in { animation: none; }
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-amber);
+  outline-offset: 2px;
+}
