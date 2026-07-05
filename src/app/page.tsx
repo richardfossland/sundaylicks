@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Lick, Category, Difficulty } from '@/types/lick'
 import { FALLBACK_LICKS, fetchLicks } from '@/lib/licks'
+import { getProgress, type Progress } from '@/lib/progress'
 import { LickCard } from '@/components/LickCard'
 import { CATEGORY_LABEL, CATEGORY_ORDER, DIFFICULTY_LABEL } from '@/lib/labels'
 import { cn } from '@/lib/cn'
@@ -15,12 +16,14 @@ export default function LibraryPage() {
   const [licks, setLicks] = useState<Lick[]>(FALLBACK_LICKS)
   const [cat, setCat] = useState<CatFilter>('all')
   const [diff, setDiff] = useState<DiffFilter>('all')
+  const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {} })
 
   useEffect(() => {
     let alive = true
     fetchLicks().then((rows) => {
       if (alive) setLicks(rows)
     })
+    setProgress(getProgress())
     return () => {
       alive = false
     }
@@ -79,7 +82,12 @@ export default function LibraryPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((l) => (
-            <LickCard key={l.slug} lick={l} />
+            <LickCard
+              key={l.slug}
+              lick={l}
+              practiced={progress.practiced.includes(l.slug)}
+              bestBpm={progress.bestBpm[l.slug]}
+            />
           ))}
         </div>
       )}

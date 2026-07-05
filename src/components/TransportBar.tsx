@@ -1,6 +1,6 @@
 'use client'
 
-import { Play, Square, Repeat, Loader2 } from 'lucide-react'
+import { Play, Square, Repeat, Loader2, TrendingUp } from 'lucide-react'
 import type { HandFilter } from '@/types/lick'
 import { KEY_NAMES } from '@/lib/music'
 import { cn } from '@/lib/cn'
@@ -11,6 +11,8 @@ interface Props {
   onPlayToggle: () => void
   loop: boolean
   onLoopToggle: () => void
+  ramp: boolean
+  onRampToggle: () => void
   bpm: number
   defaultBpm: number
   onBpm: (bpm: number) => void
@@ -57,6 +59,20 @@ export function TransportBar(p: Props) {
           )}
         >
           <Repeat className="h-4 w-4" /> Loop
+        </button>
+
+        <button
+          onClick={p.onRampToggle}
+          aria-pressed={p.ramp}
+          title="Øk tempo automatisk +4 BPM for hver loop"
+          className={cn(
+            'flex h-11 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors',
+            p.ramp
+              ? 'border-[var(--color-amber)] bg-[var(--color-amber)]/15 text-[var(--color-amber)]'
+              : 'border-[var(--color-border)] text-[var(--color-muted)]',
+          )}
+        >
+          <TrendingUp className="h-4 w-4" /> Trapp opp
         </button>
 
         <div className="flex min-w-[220px] flex-1 items-center gap-3">

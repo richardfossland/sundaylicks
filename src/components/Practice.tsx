@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Music, BarChart3, Share2, Check, Piano, Plug } from 'lucide-react'
 import type { Lick, HandFilter } from '@/types/lick'
 import { fetchLick } from '@/lib/licks'
 import { transposedNotes, transposedChords } from '@/lib/transpose'
@@ -10,10 +10,18 @@ import { getEngine } from '@/lib/playback'
 import { usePlayer } from '@/lib/store'
 import { KEY_NAMES } from '@/lib/music'
 import { CATEGORY_LABEL, DIFFICULTY_LABEL, difficultyDots } from '@/lib/labels'
+import { parseShare, buildShare } from '@/lib/share'
+import { recordPractice } from '@/lib/progress'
+import { useWaitMode } from '@/lib/useWaitMode'
+import { connectMidi, midiSupported, type MidiConnection } from '@/lib/midi'
+import { cn } from '@/lib/cn'
 import { Keyboard } from './Keyboard'
 import { PianoRoll } from './PianoRoll'
+import { Notation } from './Notation'
 import { ChordStrip } from './ChordStrip'
 import { TransportBar } from './TransportBar'
+
+type View = 'roll' | 'notation'
 
 export function Practice({ slug }: { slug: string }) {
   const [lick, setLick] = useState<Lick | null>(null)
@@ -22,6 +30,12 @@ export function Practice({ slug }: { slug: string }) {
   const [bpm, setBpm] = useState(80)
   const [hand, setHand] = useState<HandFilter>('both')
   const [loop, setLoop] = useState(true)
+  const [view, setView] = useState<View>('roll')
+  const [copied, setCopied] = useState(false)
+  const [ramp, setRamp] = useState(false)
+  const [practiceOn, setPracticeOn] = useState(false)
+  const [midi, setMidi] = useState<MidiConnection | null>(null)
+  const [midiError, setMidiError] = useState<string | null>(null)
 
   const isPlaying = usePlayer((s) => s.isPlaying)
   const isLoading = usePlayer((s) => s.isLoading)
@@ -33,20 +47,31 @@ export function Practice({ slug }: { slug: string }) {
   const loopRef = useRef(loop)
   loopRef.current = loop
 
-  // Load the lick once.
+  // Load the lick once; apply any shared URL state (?key=Eb&bpm=80&hand=R).
   useEffect(() => {
     let alive = true
     fetchLick(slug).then((l) => {
       if (!alive) return
       if (!l) return setNotFound(true)
+      const share = parseShare(window.location.search)
       setLick(l)
-      setTargetKey(l.original_key)
-      setBpm(l.default_bpm)
+      setTargetKey(share.key ?? l.original_key)
+      setBpm(share.bpm ?? l.default_bpm)
+      if (share.hand) setHand(share.hand)
+      syncedRef.current = true
     })
     return () => {
       alive = false
     }
   }, [slug])
+
+  // Reflect practice state back into the URL (after the initial load applied it).
+  const syncedRef = useRef(false)
+  useEffect(() => {
+    if (!syncedRef.current) return
+    const qs = buildShare({ key: targetKey, bpm, hand })
+    window.history.replaceState(null, '', `${window.location.pathname}?${qs}`)
+  }, [targetKey, bpm, hand])
 
   // Dispose the audio engine when leaving the page.
   useEffect(() => () => getEngine().dispose(), [])
@@ -69,6 +94,46 @@ export function Practice({ slug }: { slug: string }) {
   const notesAll = useMemo(() => (lick ? transposedNotes(lick, targetKey) : []), [lick, targetKey])
   const chords = useMemo(() => (lick ? transposedChords(lick, targetKey) : []), [lick, targetKey])
 
+  // Wait-mode trainer (input-gated step-through, MIDI or click).
+  const onTrainerLoop = useCallback(() => recordPractice(slug, bpmRef.current), [slug])
+  const waitMode = useWaitMode(notesForKeyboard, onTrainerLoop)
+  const inputRef = useRef(waitMode.input)
+  inputRef.current = waitMode.input
+
+  // Toggle wait-mode: stop transport when entering, reset when leaving.
+  useEffect(() => {
+    if (practiceOn) {
+      getEngine().stop()
+      waitMode.start()
+    } else {
+      waitMode.stop()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [practiceOn])
+
+  // Loop-boundary detection (auto mode): record progress + ramp tempo.
+  const rampRef = useRef(ramp)
+  rampRef.current = ramp
+  const prevBeatRef = useRef(0)
+  useEffect(() => {
+    if (!isPlaying) {
+      prevBeatRef.current = currentBeat
+      return
+    }
+    if (currentBeat < prevBeatRef.current - 0.5) {
+      recordPractice(slug, bpmRef.current)
+      if (rampRef.current && bpmRef.current < 180) {
+        const nb = Math.min(180, bpmRef.current + 4)
+        setBpm(nb)
+        getEngine().setTempo(nb)
+      }
+    }
+    prevBeatRef.current = currentBeat
+  }, [currentBeat, isPlaying, slug])
+
+  // MIDI cleanup on unmount.
+  useEffect(() => () => midi?.dispose(), [midi])
+
   if (notFound) {
     return (
       <main className="mx-auto max-w-md px-4 py-24 text-center">
@@ -86,8 +151,13 @@ export function Practice({ slug }: { slug: string }) {
 
   const onPlayToggle = () => {
     const engine = getEngine()
-    if (usePlayer.getState().isPlaying) engine.stop()
-    else void engine.play()
+    if (usePlayer.getState().isPlaying) {
+      engine.stop()
+    } else {
+      if (practiceOn) setPracticeOn(false)
+      recordPractice(slug, bpm)
+      void engine.play()
+    }
   }
   const onBpm = (v: number) => {
     setBpm(v)
@@ -97,6 +167,26 @@ export function Practice({ slug }: { slug: string }) {
     const next = !loop
     setLoop(next)
     getEngine().setLoop(next)
+  }
+  const onShare = async () => {
+    const qs = buildShare({ key: targetKey, bpm, hand })
+    const url = `${window.location.origin}${window.location.pathname}?${qs}`
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1600)
+    } catch {
+      /* clipboard blocked — no-op */
+    }
+  }
+  const onConnectMidi = async () => {
+    setMidiError(null)
+    try {
+      const conn = await connectMidi((m) => inputRef.current(m))
+      setMidi(conn)
+    } catch (e) {
+      setMidiError(e instanceof Error ? e.message : 'Kunne ikke koble til MIDI')
+    }
   }
 
   return (
@@ -127,15 +217,101 @@ export function Practice({ slug }: { slug: string }) {
       </header>
 
       <div className="flex flex-col gap-4">
-        <Keyboard notes={notesForKeyboard} currentBeat={isPlaying ? currentBeat : 0} />
-        <ChordStrip chords={chords} beats={lick.beats} currentBeat={currentBeat} />
-        <PianoRoll notes={notesAll} hand={hand} beats={lick.beats} currentBeat={currentBeat} />
+        <Keyboard
+          notes={notesForKeyboard}
+          currentBeat={practiceOn ? -1 : isPlaying ? currentBeat : 0}
+          expected={practiceOn ? waitMode.expected : undefined}
+          feedback={practiceOn ? waitMode.feedback : undefined}
+          onKeyPress={(m) => inputRef.current(m)}
+        />
+        <ChordStrip chords={chords} beats={lick.beats} currentBeat={practiceOn ? -1 : currentBeat} />
+
+        {/* View toggle + share */}
+        <div className="flex items-center justify-between">
+          <div className="flex gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-1">
+            <ViewTab active={view === 'roll'} onClick={() => setView('roll')} icon={<BarChart3 className="h-4 w-4" />}>
+              Pianorull
+            </ViewTab>
+            <ViewTab active={view === 'notation'} onClick={() => setView('notation')} icon={<Music className="h-4 w-4" />}>
+              Noter
+            </ViewTab>
+          </div>
+          <button
+            onClick={onShare}
+            className="flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ivory)]"
+          >
+            {copied ? <Check className="h-4 w-4 text-[var(--color-sea)]" /> : <Share2 className="h-4 w-4" />}
+            {copied ? 'Kopiert' : 'Del'}
+          </button>
+        </div>
+
+        {view === 'roll' ? (
+          <PianoRoll notes={notesAll} hand={hand} beats={lick.beats} currentBeat={practiceOn ? -1 : currentBeat} />
+        ) : (
+          <Notation notes={notesAll} beats={lick.beats} timeSignature={lick.time_signature} />
+        )}
+
+        {/* Wait-mode trainer */}
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button
+              onClick={() => setPracticeOn((v) => !v)}
+              aria-pressed={practiceOn}
+              className={cn(
+                'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                practiceOn
+                  ? 'border-[var(--color-sea)] bg-[var(--color-sea)]/15 text-[var(--color-sea)]'
+                  : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ivory)]',
+              )}
+            >
+              <Piano className="h-4 w-4" /> Øvemodus (vent-modus)
+            </button>
+
+            {midiSupported() ? (
+              midi ? (
+                <span className="flex items-center gap-1.5 text-sm text-[var(--color-sea)]">
+                  <Plug className="h-4 w-4" /> {midi.deviceNames[0] ?? 'MIDI tilkoblet'}
+                </span>
+              ) : (
+                <button
+                  onClick={onConnectMidi}
+                  className="flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-3.5 py-2 text-sm text-[var(--color-muted)] hover:text-[var(--color-ivory)]"
+                >
+                  <Plug className="h-4 w-4" /> Koble til MIDI-keyboard
+                </button>
+              )
+            ) : (
+              <span className="text-xs text-[var(--color-muted)]">
+                MIDI krever Chrome/Edge — eller klikk tangentene
+              </span>
+            )}
+          </div>
+
+          {practiceOn && (
+            <p className="mt-3 text-sm text-[var(--color-muted)]">
+              Spill de <span className="text-[var(--color-amber)]">markerte</span> tangentene i rekkefølge
+              {waitMode.total > 0 && (
+                <>
+                  {' — '}
+                  <span className="font-display text-[var(--color-ivory)]">
+                    trinn {waitMode.step + 1} / {waitMode.total}
+                  </span>
+                </>
+              )}
+              . Grønt = riktig, rødt = bom. Bruk MIDI eller klikk.
+            </p>
+          )}
+          {midiError && <p className="mt-2 text-xs text-[var(--color-blight,#C7534E)]">{midiError}</p>}
+        </div>
+
         <TransportBar
           isPlaying={isPlaying}
           isLoading={isLoading}
           onPlayToggle={onPlayToggle}
           loop={loop}
           onLoopToggle={onLoopToggle}
+          ramp={ramp}
+          onRampToggle={() => setRamp((v) => !v)}
           bpm={bpm}
           defaultBpm={lick.default_bpm}
           onBpm={onBpm}
@@ -146,5 +322,31 @@ export function Practice({ slug }: { slug: string }) {
         />
       </div>
     </main>
+  )
+}
+
+function ViewTab({
+  active,
+  onClick,
+  icon,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  icon: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        'flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors',
+        active ? 'bg-[var(--color-raised)] text-[var(--color-ivory)]' : 'text-[var(--color-muted)]',
+      )}
+    >
+      {icon}
+      {children}
+    </button>
   )
 }

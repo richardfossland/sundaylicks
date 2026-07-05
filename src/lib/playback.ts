@@ -116,6 +116,13 @@ class PlaybackEngine {
     Tone.Transport.bpm.value = bpm
   }
 
+  /** Trigger a single note now (click / MIDI feedback, wait-mode). */
+  async playNote(midi: number, velocity = 0.8, durationSec = 0.6) {
+    await Tone.start()
+    const sampler = await this.ensureSampler()
+    sampler.triggerAttackRelease(Tone.Frequency(midi, 'midi').toFrequency(), durationSec, undefined, velocity)
+  }
+
   async play() {
     await Tone.start()
     await this.ensureSampler()
