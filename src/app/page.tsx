@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { Plus, Heart, Play, Trash2, ListMusic } from 'lucide-react'
 import type { Lick, Category, Genre, Difficulty } from '@/types/lick'
 import { FALLBACK_LICKS, fetchLicks } from '@/lib/licks'
 import { getProgress, type Progress } from '@/lib/progress'
+import { useCollections } from '@/lib/collections'
 import { LickCard } from '@/components/LickCard'
 import { CATEGORY_LABEL, CATEGORY_ORDER, GENRE_LABEL, GENRE_ORDER, DIFFICULTY_LABEL } from '@/lib/labels'
 import { cn } from '@/lib/cn'
@@ -13,14 +14,23 @@ import { cn } from '@/lib/cn'
 type CatFilter = Category | 'all'
 type GenreFilter = Genre | 'all'
 type DiffFilter = Difficulty | 'all'
+type Mode = 'all' | 'favs' | string // string = list id
 
 export default function LibraryPage() {
-  // Start with the bundled licks for instant paint; refresh from Supabase.
   const [licks, setLicks] = useState<Lick[]>(FALLBACK_LICKS)
   const [cat, setCat] = useState<CatFilter>('all')
   const [genre, setGenre] = useState<GenreFilter>('all')
   const [diff, setDiff] = useState<DiffFilter>('all')
+  const [mode, setMode] = useState<Mode>('all')
   const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {} })
+  const [creating, setCreating] = useState(false)
+  const [newName, setNewName] = useState('')
+
+  const favorites = useCollections((s) => s.favorites)
+  const lists = useCollections((s) => s.lists)
+  const loadCollections = useCollections((s) => s.load)
+  const createList = useCollections((s) => s.createList)
+  const deleteList = useCollections((s) => s.deleteList)
 
   useEffect(() => {
     let alive = true
@@ -28,31 +38,46 @@ export default function LibraryPage() {
       if (alive) setLicks(rows)
     })
     setProgress(getProgress())
+    loadCollections()
     return () => {
       alive = false
     }
-  }, [])
+  }, [loadCollections])
 
-  const cats = useMemo(() => {
-    const present = new Set(licks.map((l) => l.category))
-    return CATEGORY_ORDER.filter((c) => present.has(c))
-  }, [licks])
+  const bySlug = useMemo(() => new Map(licks.map((l) => [l.slug, l])), [licks])
+  const activeList = useMemo(
+    () => (mode !== 'all' && mode !== 'favs' ? (lists.find((l) => l.id === mode) ?? null) : null),
+    [mode, lists],
+  )
 
   const genres = useMemo(() => {
     const present = new Set(licks.map((l) => l.genre))
     return GENRE_ORDER.filter((g) => present.has(g))
   }, [licks])
+  const cats = useMemo(() => {
+    const present = new Set(licks.map((l) => l.category))
+    return CATEGORY_ORDER.filter((c) => present.has(c))
+  }, [licks])
 
-  const filtered = useMemo(
-    () =>
-      licks.filter(
-        (l) =>
-          (cat === 'all' || l.category === cat) &&
-          (genre === 'all' || l.genre === genre) &&
-          (diff === 'all' || l.difficulty === diff),
-      ),
-    [licks, cat, genre, diff],
-  )
+  const filtered = useMemo(() => {
+    if (activeList) {
+      return activeList.slugs.map((s) => bySlug.get(s)).filter(Boolean) as Lick[]
+    }
+    return licks.filter(
+      (l) =>
+        (mode !== 'favs' || favorites.includes(l.slug)) &&
+        (cat === 'all' || l.category === cat) &&
+        (genre === 'all' || l.genre === genre) &&
+        (diff === 'all' || l.difficulty === diff),
+    )
+  }, [licks, activeList, mode, favorites, cat, genre, diff, bySlug])
+
+  const startCreate = () => {
+    const id = createList(newName)
+    setNewName('')
+    setCreating(false)
+    setMode(id)
+  }
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:py-12">
@@ -60,8 +85,8 @@ export default function LibraryPage() {
         <div>
           <h1 className="font-display text-4xl text-[var(--color-ivory)] sm:text-5xl">SundayLicks</h1>
           <p className="mt-2 max-w-xl text-[var(--color-muted)]">
-            Øv gospel- og lovsang-licks med opplyst klaviatur, live tempo og transponering til alle
-            tonearter. Alt spilles fra noter — aldri lyd — så det aldri knirker.
+            Øv gospel-, lovsang- og jazzlicks med opplyst klaviatur, live tempo og transponering til
+            alle tonearter. Alt spilles fra noter — aldri lyd — så det aldri knirker.
           </p>
         </div>
         <Link
@@ -72,43 +97,123 @@ export default function LibraryPage() {
         </Link>
       </header>
 
-      {/* Filters */}
-      <div className="mb-8 flex flex-col gap-3">
-        <FilterRow label="Sjanger">
-          <Chip active={genre === 'all'} onClick={() => setGenre('all')}>
-            Alle
+      {/* Collections: favorites + practice lists */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="w-16 shrink-0 text-sm text-[var(--color-muted)]">Samlinger</span>
+        <Chip active={mode === 'all'} onClick={() => setMode('all')}>
+          Alle
+        </Chip>
+        <Chip active={mode === 'favs'} onClick={() => setMode('favs')}>
+          <Heart className="mr-1 inline h-3.5 w-3.5" fill={mode === 'favs' ? 'currentColor' : 'none'} />
+          Favoritter{favorites.length > 0 ? ` (${favorites.length})` : ''}
+        </Chip>
+        {lists.map((l) => (
+          <Chip key={l.id} active={mode === l.id} onClick={() => setMode(l.id)}>
+            <ListMusic className="mr-1 inline h-3.5 w-3.5" />
+            {l.name} ({l.slugs.length})
           </Chip>
-          {genres.map((g) => (
-            <Chip key={g} active={genre === g} onClick={() => setGenre(g)}>
-              {GENRE_LABEL[g]}
-            </Chip>
-          ))}
-        </FilterRow>
-        <FilterRow label="Kategori">
-          <Chip active={cat === 'all'} onClick={() => setCat('all')}>
-            Alle
-          </Chip>
-          {cats.map((c) => (
-            <Chip key={c} active={cat === c} onClick={() => setCat(c)}>
-              {CATEGORY_LABEL[c]}
-            </Chip>
-          ))}
-        </FilterRow>
-        <FilterRow label="Nivå">
-          <Chip active={diff === 'all'} onClick={() => setDiff('all')}>
-            Alle
-          </Chip>
-          {([1, 2, 3] as Difficulty[]).map((d) => (
-            <Chip key={d} active={diff === d} onClick={() => setDiff(d)}>
-              {DIFFICULTY_LABEL[d]}
-            </Chip>
-          ))}
-        </FilterRow>
+        ))}
+        {creating ? (
+          <span className="flex items-center gap-1">
+            <input
+              autoFocus
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') startCreate()
+                if (e.key === 'Escape') setCreating(false)
+              }}
+              placeholder="Listenavn"
+              className="w-32 rounded-full border border-[var(--color-border)] bg-[var(--color-raised)] px-3 py-1.5 text-sm text-[var(--color-ivory)] outline-none focus:border-[var(--color-amber)]"
+            />
+            <button onClick={startCreate} className="rounded-full bg-[var(--color-amber)] px-3 py-1.5 text-sm font-medium text-[#171210]">
+              Lag
+            </button>
+          </span>
+        ) : (
+          <button
+            onClick={() => setCreating(true)}
+            className="flex items-center gap-1 rounded-full border border-dashed border-[var(--color-border)] px-3 py-1.5 text-sm text-[var(--color-muted)] hover:text-[var(--color-ivory)]"
+          >
+            <Plus className="h-3.5 w-3.5" /> Ny liste
+          </button>
+        )}
       </div>
+
+      {/* Filters (hidden in list mode — a list shows its whole contents) */}
+      {!activeList && (
+        <div className="mb-8 flex flex-col gap-3">
+          <FilterRow label="Sjanger">
+            <Chip active={genre === 'all'} onClick={() => setGenre('all')}>
+              Alle
+            </Chip>
+            {genres.map((g) => (
+              <Chip key={g} active={genre === g} onClick={() => setGenre(g)}>
+                {GENRE_LABEL[g]}
+              </Chip>
+            ))}
+          </FilterRow>
+          <FilterRow label="Kategori">
+            <Chip active={cat === 'all'} onClick={() => setCat('all')}>
+              Alle
+            </Chip>
+            {cats.map((c) => (
+              <Chip key={c} active={cat === c} onClick={() => setCat(c)}>
+                {CATEGORY_LABEL[c]}
+              </Chip>
+            ))}
+          </FilterRow>
+          <FilterRow label="Nivå">
+            <Chip active={diff === 'all'} onClick={() => setDiff('all')}>
+              Alle
+            </Chip>
+            {([1, 2, 3] as Difficulty[]).map((d) => (
+              <Chip key={d} active={diff === d} onClick={() => setDiff(d)}>
+                {DIFFICULTY_LABEL[d]}
+              </Chip>
+            ))}
+          </FilterRow>
+        </div>
+      )}
+
+      {/* List header with practice + delete */}
+      {activeList && (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <div>
+            <h2 className="font-display text-2xl text-[var(--color-ivory)]">{activeList.name}</h2>
+            <p className="text-sm text-[var(--color-muted)]">{activeList.slugs.length} licks i lista</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {activeList.slugs.length > 0 && (
+              <Link
+                href={`/lick/${activeList.slugs[0]}?list=${activeList.id}&i=0`}
+                className="flex items-center gap-1.5 rounded-full bg-[var(--color-amber)] px-4 py-2 text-sm font-medium text-[#171210]"
+              >
+                <Play className="h-4 w-4" fill="currentColor" /> Start øving
+              </Link>
+            )}
+            <button
+              onClick={() => {
+                deleteList(activeList.id)
+                setMode('all')
+              }}
+              className="flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-3.5 py-2 text-sm text-[var(--color-muted)] hover:text-[#C7534E]"
+            >
+              <Trash2 className="h-4 w-4" /> Slett
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Grid */}
       {filtered.length === 0 ? (
-        <p className="py-16 text-center text-[var(--color-muted)]">Ingen licks matcher filtrene.</p>
+        <p className="py-16 text-center text-[var(--color-muted)]">
+          {mode === 'favs'
+            ? 'Ingen favoritter enda — trykk hjertet på en lick.'
+            : activeList
+              ? 'Lista er tom — åpne en lick og bruk «Legg til i liste».'
+              : 'Ingen licks matcher filtrene.'}
+        </p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((l) => (

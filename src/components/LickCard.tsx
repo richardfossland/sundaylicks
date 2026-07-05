@@ -3,6 +3,7 @@ import { Check } from 'lucide-react'
 import type { Lick } from '@/types/lick'
 import { CATEGORY_LABEL, GENRE_LABEL, DIFFICULTY_LABEL, difficultyDots } from '@/lib/labels'
 import { KEY_NAMES } from '@/lib/music'
+import { FavoriteButton } from './FavoriteButton'
 
 export function LickCard({
   lick,
@@ -28,6 +29,7 @@ export function LickCard({
           {lick.name}
         </h3>
         <div className="flex shrink-0 flex-col items-end gap-1">
+          <FavoriteButton slug={lick.slug} stopNav className="-mr-1 -mt-1" />
           <span className="rounded-full border border-[var(--color-amber)]/40 bg-[var(--color-amber)]/10 px-2.5 py-0.5 text-xs text-[var(--color-amber)]">
             {GENRE_LABEL[lick.genre]}
           </span>

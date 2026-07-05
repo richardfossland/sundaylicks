@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Music, BarChart3, Share2, Check, Piano, Plug } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ArrowLeft, Music, BarChart3, Share2, Check, Piano, Plug, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Lick, HandFilter } from '@/types/lick'
 import { fetchLick } from '@/lib/licks'
 import { transposedNotes, transposedChords } from '@/lib/transpose'
@@ -12,6 +13,7 @@ import { KEY_NAMES } from '@/lib/music'
 import { CATEGORY_LABEL, GENRE_LABEL, DIFFICULTY_LABEL, difficultyDots } from '@/lib/labels'
 import { parseShare, buildShare } from '@/lib/share'
 import { recordPractice } from '@/lib/progress'
+import { useCollections } from '@/lib/collections'
 import { useWaitMode } from '@/lib/useWaitMode'
 import { connectMidi, midiSupported, type MidiConnection } from '@/lib/midi'
 import { cn } from '@/lib/cn'
@@ -20,6 +22,8 @@ import { PianoRoll } from './PianoRoll'
 import { Notation } from './Notation'
 import { ChordStrip } from './ChordStrip'
 import { TransportBar } from './TransportBar'
+import { FavoriteButton } from './FavoriteButton'
+import { AddToListButton } from './AddToListButton'
 
 type View = 'roll' | 'notation'
 
@@ -36,6 +40,11 @@ export function Practice({ slug }: { slug: string }) {
   const [practiceOn, setPracticeOn] = useState(false)
   const [midi, setMidi] = useState<MidiConnection | null>(null)
   const [midiError, setMidiError] = useState<string | null>(null)
+  const [listCtx, setListCtx] = useState<{ id: string; index: number } | null>(null)
+
+  const router = useRouter()
+  const loadCollections = useCollections((s) => s.load)
+  const lists = useCollections((s) => s.lists)
 
   const isPlaying = usePlayer((s) => s.isPlaying)
   const isLoading = usePlayer((s) => s.isLoading)
@@ -50,10 +59,14 @@ export function Practice({ slug }: { slug: string }) {
   // Load the lick once; apply any shared URL state (?key=Eb&bpm=80&hand=R).
   useEffect(() => {
     let alive = true
+    loadCollections()
     fetchLick(slug).then((l) => {
       if (!alive) return
       if (!l) return setNotFound(true)
+      const q = new URLSearchParams(window.location.search)
       const share = parseShare(window.location.search)
+      const listId = q.get('list')
+      setListCtx(listId ? { id: listId, index: Number(q.get('i') ?? 0) || 0 } : null)
       setLick(l)
       setTargetKey(share.key ?? l.original_key)
       setBpm(share.bpm ?? l.default_bpm)
@@ -70,8 +83,9 @@ export function Practice({ slug }: { slug: string }) {
   useEffect(() => {
     if (!syncedRef.current) return
     const qs = buildShare({ key: targetKey, bpm, hand })
-    window.history.replaceState(null, '', `${window.location.pathname}?${qs}`)
-  }, [targetKey, bpm, hand])
+    const extra = listCtx ? `&list=${listCtx.id}&i=${listCtx.index}` : ''
+    window.history.replaceState(null, '', `${window.location.pathname}?${qs}${extra}`)
+  }, [targetKey, bpm, hand, listCtx])
 
   // Dispose the audio engine when leaving the page.
   useEffect(() => () => getEngine().dispose(), [])
@@ -189,14 +203,49 @@ export function Practice({ slug }: { slug: string }) {
     }
   }
 
+  const navList = listCtx ? lists.find((l) => l.id === listCtx.id) : null
+  const goTo = (idx: number) => {
+    if (!navList) return
+    const s = navList.slugs[idx]
+    if (s) router.push(`/lick/${s}?list=${navList.id}&i=${idx}`)
+  }
+
   return (
     <main className="mx-auto max-w-4xl px-4 py-6 sm:py-10">
-      <Link
-        href="/"
-        className="mb-6 inline-flex items-center gap-1.5 text-sm text-[var(--color-muted)] hover:text-[var(--color-ivory)]"
-      >
-        <ArrowLeft className="h-4 w-4" /> Biblioteket
-      </Link>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-sm text-[var(--color-muted)] hover:text-[var(--color-ivory)]"
+        >
+          <ArrowLeft className="h-4 w-4" /> Biblioteket
+        </Link>
+        <div className="flex items-center gap-2">
+          <AddToListButton slug={lick.slug} />
+          <FavoriteButton slug={lick.slug} size={20} />
+        </div>
+      </div>
+
+      {navList && navList.slugs.length > 0 && (
+        <div className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2">
+          <button
+            onClick={() => goTo(listCtx!.index - 1)}
+            disabled={!listCtx || listCtx.index <= 0}
+            className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm text-[var(--color-ivory)] disabled:opacity-40"
+          >
+            <ChevronLeft className="h-4 w-4" /> Forrige
+          </button>
+          <span className="truncate text-sm text-[var(--color-muted)]">
+            {navList.name} · {(listCtx?.index ?? 0) + 1}/{navList.slugs.length}
+          </span>
+          <button
+            onClick={() => goTo((listCtx?.index ?? 0) + 1)}
+            disabled={!listCtx || listCtx.index >= navList.slugs.length - 1}
+            className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm text-[var(--color-ivory)] disabled:opacity-40"
+          >
+            Neste <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       <header className="mb-6">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--color-muted)]">
