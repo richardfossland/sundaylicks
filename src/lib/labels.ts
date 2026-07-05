@@ -22,13 +22,19 @@ export const GENRE_LABEL: Record<Genre, string> = {
   blues: 'Blues',
   boogie: 'Boogie-woogie',
   neosoul: 'Neo-soul',
+  funk: 'Funk',
+  rnb: 'R&B/Soul',
   latin: 'Latin',
+  stride: 'Stride/Ragtime',
   classical: 'Klassisk',
+  country: 'Country/CCM',
+  cinematic: 'Cinematic',
   rock: 'Rock/Pop',
 }
 
 export const GENRE_ORDER: Genre[] = [
-  'gospel', 'worship', 'jazz', 'blues', 'boogie', 'neosoul', 'latin', 'classical', 'rock',
+  'gospel', 'worship', 'jazz', 'blues', 'boogie', 'neosoul', 'funk', 'rnb',
+  'latin', 'stride', 'classical', 'country', 'cinematic', 'rock',
 ]
 
 export const DIFFICULTY_LABEL: Record<Difficulty, string> = {

@@ -24,7 +24,10 @@ export const lickContent = z.object({
   name: z.string().min(1).max(80),
   description: z.string().max(400).nullable(),
   category: z.enum(['turnaround', 'two-five-one', 'run', 'fill', 'ending', 'intro', 'comp', 'groove']),
-  genre: z.enum(['gospel', 'worship', 'jazz', 'blues', 'boogie', 'neosoul', 'latin', 'classical', 'rock']),
+  genre: z.enum([
+    'gospel', 'worship', 'jazz', 'blues', 'boogie', 'neosoul', 'latin', 'classical', 'rock',
+    'funk', 'rnb', 'stride', 'country', 'cinematic',
+  ]),
   difficulty: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   original_key: z.number().int().min(0).max(11),
   default_bpm: z.number().int().min(20).max(300),

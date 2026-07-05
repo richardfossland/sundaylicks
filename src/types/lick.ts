@@ -25,6 +25,11 @@ export type Genre =
   | 'latin'
   | 'classical'
   | 'rock'
+  | 'funk'
+  | 'rnb'
+  | 'stride'
+  | 'country'
+  | 'cinematic'
 
 export type Difficulty = 1 | 2 | 3 // 1 = nybegynner, 2 = middels, 3 = avansert
 

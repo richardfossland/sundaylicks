@@ -24,7 +24,7 @@ create table if not exists licks.licks (
   name           text not null,
   description    text,
   category       text not null
-    check (category in ('turnaround','two-five-one','run','fill','ending','intro')),
+    check (category in ('turnaround','two-five-one','run','fill','ending','intro','comp','groove')),
   difficulty     smallint not null check (difficulty between 1 and 3),
   original_key   smallint not null check (original_key between 0 and 11),
   default_bpm    smallint not null check (default_bpm between 20 and 300),

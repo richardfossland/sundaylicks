@@ -11,3 +11,8 @@ alter table licks.licks
 
 create index if not exists licks_genre_idx
   on licks.licks (genre) where status = 'published';
+
+-- The bigger library also added two categories (comp, groove). Widen the check.
+alter table licks.licks drop constraint if exists licks_category_check;
+alter table licks.licks add constraint licks_category_check
+  check (category in ('turnaround','two-five-one','run','fill','ending','intro','comp','groove'));
