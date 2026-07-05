@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Music, BarChart3, Share2, Check, Piano, Plug, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Music, BarChart3, Share2, Check, Piano, Plug, ChevronLeft, ChevronRight, Users, Repeat } from 'lucide-react'
 import type { Lick, HandFilter } from '@/types/lick'
 import { fetchLick } from '@/lib/licks'
 import { transposedNotes, transposedChords } from '@/lib/transpose'
@@ -39,7 +39,13 @@ export function Practice({ slug }: { slug: string }) {
   const [view, setView] = useState<View>('roll')
   const [copied, setCopied] = useState(false)
   const [ramp, setRamp] = useState(false)
+  const [swing, setSwing] = useState(0)
   const [practiceOn, setPracticeOn] = useState(false)
+  const [bandMode, setBandMode] = useState(false)
+  const [backingHand, setBackingHand] = useState<'L' | 'R'>('L')
+  const [abLoop, setAbLoop] = useState(false)
+  const [loopA, setLoopA] = useState(0)
+  const [loopB, setLoopB] = useState(8)
   const [midi, setMidi] = useState<MidiConnection | null>(null)
   const [midiError, setMidiError] = useState<string | null>(null)
   const [listCtx, setListCtx] = useState<{ kind: 'list' | 'path'; id: string; index: number } | null>(null)
@@ -59,6 +65,12 @@ export function Practice({ slug }: { slug: string }) {
   bpmRef.current = bpm
   const loopRef = useRef(loop)
   loopRef.current = loop
+  const swingRef = useRef(swing)
+  swingRef.current = swing
+
+  // Which hand plays back: in band mode the app plays the BACKING hand while you
+  // play the other one live.
+  const playbackHand: HandFilter = bandMode ? backingHand : hand
 
   // Load the lick once; apply any shared URL state (?key=Eb&bpm=80&hand=R).
   useEffect(() => {
@@ -78,6 +90,8 @@ export function Practice({ slug }: { slug: string }) {
       setLick(l)
       setTargetKey(share.key ?? l.original_key)
       setBpm(share.bpm ?? l.default_bpm)
+      setLoopB(l.beats)
+      setLoopA(0)
       if (share.hand) setHand(share.hand)
       syncedRef.current = true
     })
@@ -105,13 +119,25 @@ export function Practice({ slug }: { slug: string }) {
     const engine = getEngine()
     const wasPlaying = usePlayer.getState().isPlaying
     if (wasPlaying) engine.stop() // key/hand change restarts from the top
-    engine.build(lick, { targetKey, hand, bpm: bpmRef.current, loop: loopRef.current })
+    engine.build(lick, {
+      targetKey,
+      hand: playbackHand,
+      bpm: bpmRef.current,
+      loop: loopRef.current || abLoop || bandMode,
+      swing: swingRef.current,
+    })
     if (wasPlaying) void engine.play()
-  }, [lick, targetKey, hand])
+  }, [lick, targetKey, playbackHand, abLoop, bandMode])
+
+  // Keep the engine's A-B loop range in sync with the UI (live, no rebuild).
+  useEffect(() => {
+    getEngine().setLoopRange(abLoop ? loopA : null, abLoop ? loopB : null)
+  }, [abLoop, loopA, loopB])
 
   const notesForKeyboard = useMemo(
-    () => (lick ? transposedNotes(lick, targetKey).filter((n) => hand === 'both' || n.h === hand) : []),
-    [lick, targetKey, hand],
+    () =>
+      lick ? transposedNotes(lick, targetKey).filter((n) => playbackHand === 'both' || n.h === playbackHand) : [],
+    [lick, targetKey, playbackHand],
   )
   const notesAll = useMemo(() => (lick ? transposedNotes(lick, targetKey) : []), [lick, targetKey])
   const chords = useMemo(() => (lick ? transposedChords(lick, targetKey) : []), [lick, targetKey])
@@ -189,6 +215,11 @@ export function Practice({ slug }: { slug: string }) {
     const next = !loop
     setLoop(next)
     getEngine().setLoop(next)
+  }
+  const onSwingToggle = () => {
+    const next = swing > 0 ? 0 : 0.55
+    setSwing(next)
+    getEngine().setSwing(next)
   }
   const onShare = async () => {
     const qs = buildShare({ key: targetKey, bpm, hand })
@@ -313,26 +344,104 @@ export function Practice({ slug }: { slug: string }) {
         </div>
 
         {view === 'roll' ? (
-          <PianoRoll notes={notesAll} hand={hand} beats={lick.beats} currentBeat={practiceOn ? -1 : currentBeat} />
+          <PianoRoll
+            notes={notesAll}
+            hand={playbackHand}
+            beats={lick.beats}
+            currentBeat={practiceOn ? -1 : currentBeat}
+            loopRange={abLoop ? { a: loopA, b: loopB } : null}
+          />
         ) : (
           <Notation notes={notesAll} beats={lick.beats} timeSignature={lick.time_signature} />
         )}
 
+        {/* A-B section loop */}
+        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <button
+            onClick={() => setAbLoop((v) => !v)}
+            aria-pressed={abLoop}
+            className={cn(
+              'flex w-fit items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+              abLoop
+                ? 'border-[var(--color-amber)] bg-[var(--color-amber)]/15 text-[var(--color-amber)]'
+                : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ivory)]',
+            )}
+          >
+            <Repeat className="h-4 w-4" /> Loop A–B (øv en del)
+          </button>
+          {abLoop && (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-6">
+              <label className="flex flex-1 items-center gap-2 text-sm text-[var(--color-muted)]">
+                <span className="w-8">A: {loopA}</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={lick.beats - 0.5}
+                  step={0.5}
+                  value={loopA}
+                  onChange={(e) => setLoopA(Math.min(Number(e.target.value), loopB - 0.5))}
+                  className="flex-1 accent-[var(--color-amber)]"
+                />
+              </label>
+              <label className="flex flex-1 items-center gap-2 text-sm text-[var(--color-muted)]">
+                <span className="w-8">B: {loopB}</span>
+                <input
+                  type="range"
+                  min={0.5}
+                  max={lick.beats}
+                  step={0.5}
+                  value={loopB}
+                  onChange={(e) => setLoopB(Math.max(Number(e.target.value), loopA + 0.5))}
+                  className="flex-1 accent-[var(--color-amber)]"
+                />
+              </label>
+            </div>
+          )}
+        </div>
+
         {/* Wait-mode trainer */}
         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <button
-              onClick={() => setPracticeOn((v) => !v)}
-              aria-pressed={practiceOn}
-              className={cn(
-                'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
-                practiceOn
-                  ? 'border-[var(--color-sea)] bg-[var(--color-sea)]/15 text-[var(--color-sea)]'
-                  : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ivory)]',
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => {
+                  setPracticeOn((v) => !v)
+                  if (!practiceOn) setBandMode(false)
+                }}
+                aria-pressed={practiceOn}
+                className={cn(
+                  'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                  practiceOn
+                    ? 'border-[var(--color-sea)] bg-[var(--color-sea)]/15 text-[var(--color-sea)]'
+                    : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ivory)]',
+                )}
+              >
+                <Piano className="h-4 w-4" /> Øvemodus (vent-modus)
+              </button>
+              <button
+                onClick={() => {
+                  setBandMode((v) => !v)
+                  if (!bandMode) setPracticeOn(false)
+                }}
+                aria-pressed={bandMode}
+                className={cn(
+                  'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                  bandMode
+                    ? 'border-[var(--color-sea)] bg-[var(--color-sea)]/15 text-[var(--color-sea)]'
+                    : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ivory)]',
+                )}
+              >
+                <Users className="h-4 w-4" /> Band-modus
+              </button>
+              {bandMode && (
+                <button
+                  onClick={() => setBackingHand((h) => (h === 'L' ? 'R' : 'L'))}
+                  className="rounded-full border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] hover:text-[var(--color-ivory)]"
+                >
+                  App spiller: {backingHand === 'L' ? 'venstre' : 'høyre'} hånd
+                </button>
               )}
-            >
-              <Piano className="h-4 w-4" /> Øvemodus (vent-modus)
-            </button>
+            </div>
 
             {midiSupported() ? (
               midi ? (
@@ -383,6 +492,8 @@ export function Practice({ slug }: { slug: string }) {
           onMetronomeToggle={() => usePlayer.getState().set({ metronome: !usePlayer.getState().metronome })}
           countIn={countIn}
           onCountInToggle={() => usePlayer.getState().set({ countIn: !usePlayer.getState().countIn })}
+          swing={swing}
+          onSwingToggle={onSwingToggle}
           bpm={bpm}
           defaultBpm={lick.default_bpm}
           onBpm={onBpm}

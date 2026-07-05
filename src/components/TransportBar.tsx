@@ -1,6 +1,6 @@
 'use client'
 
-import { Play, Square, Repeat, Loader2, TrendingUp, Timer, Hash } from 'lucide-react'
+import { Play, Square, Repeat, Loader2, TrendingUp, Timer, Hash, Waves } from 'lucide-react'
 import type { HandFilter } from '@/types/lick'
 import { KEY_NAMES } from '@/lib/music'
 import { cn } from '@/lib/cn'
@@ -17,6 +17,8 @@ interface Props {
   onMetronomeToggle: () => void
   countIn: boolean
   onCountInToggle: () => void
+  swing: number
+  onSwingToggle: () => void
   bpm: number
   defaultBpm: number
   onBpm: (bpm: number) => void
@@ -105,6 +107,20 @@ export function TransportBar(p: Props) {
           )}
         >
           <Hash className="h-4 w-4" /> Tell inn
+        </button>
+
+        <button
+          onClick={p.onSwingToggle}
+          aria-pressed={p.swing > 0}
+          title="Swing-følelse (jazz/blues/gospel)"
+          className={cn(
+            'flex h-11 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors',
+            p.swing > 0
+              ? 'border-[var(--color-amber)] bg-[var(--color-amber)]/15 text-[var(--color-amber)]'
+              : 'border-[var(--color-border)] text-[var(--color-muted)]',
+          )}
+        >
+          <Waves className="h-4 w-4" /> Swing
         </button>
 
         <div className="flex min-w-[220px] flex-1 items-center gap-3">

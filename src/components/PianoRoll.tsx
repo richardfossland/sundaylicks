@@ -13,9 +13,10 @@ interface Props {
   hand: HandFilter
   beats: number
   currentBeat: number
+  loopRange?: { a: number; b: number } | null // A-B section loop shading
 }
 
-export function PianoRoll({ notes, hand, beats, currentBeat }: Props) {
+export function PianoRoll({ notes, hand, beats, currentBeat, loopRange }: Props) {
   const { lo, hi } = useMemo(() => {
     if (notes.length === 0) return { lo: 60, hi: 72 }
     const ps = notes.map((n) => n.p)
@@ -30,6 +31,17 @@ export function PianoRoll({ notes, hand, beats, currentBeat }: Props) {
   return (
     <div className="scroll-x rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
       <svg width={width} height={height} className="block" role="img" aria-label="Pianorull">
+        {/* A-B section-loop shading */}
+        {loopRange && (
+          <rect
+            x={loopRange.a * BEAT_W}
+            y={0}
+            width={Math.max(0, (loopRange.b - loopRange.a) * BEAT_W)}
+            height={height}
+            fill="var(--color-amber)"
+            opacity={0.1}
+          />
+        )}
         {/* Row backgrounds (subtle black-key shading) */}
         {Array.from({ length: rows }, (_, i) => {
           const p = hi - i

@@ -29,6 +29,7 @@ export interface BuildOptions {
   hand: HandFilter
   bpm: number
   loop: boolean
+  swing?: number // 0 = straight, ~0.5 = jazz swing (Tone.Transport.swing)
 }
 
 /**
@@ -44,6 +45,8 @@ class PlaybackEngine {
   private endEvent: number | null = null
   private metro: Tone.MembraneSynth | null = null
   private metroId: number | null = null
+  private loopStartBeat = 0
+  private loopEndBeat: number | null = null // null = full length
 
   private ensureMetro(): Tone.MembraneSynth {
     if (!this.metro) {
@@ -104,10 +107,29 @@ class PlaybackEngine {
     this.totalBeats = lick.beats
 
     Tone.Transport.bpm.value = opts.bpm
+    Tone.Transport.swing = opts.swing ?? 0
+    Tone.Transport.swingSubdivision = '8n'
     Tone.Transport.loop = opts.loop
-    Tone.Transport.loopStart = 0
-    Tone.Transport.loopEnd = beatToTicks(lick.beats)
+    this.applyLoopRange(beatToTicks)
     this.scheduleEnd(opts.loop)
+  }
+
+  private applyLoopRange(beatToTicks: (b: number) => string) {
+    const end = this.loopEndBeat === null ? this.totalBeats : Math.min(this.loopEndBeat, this.totalBeats)
+    Tone.Transport.loopStart = beatToTicks(Math.max(0, this.loopStartBeat))
+    Tone.Transport.loopEnd = beatToTicks(end)
+  }
+
+  /** A-B section loop: pass (null, null) to reset to the full lick. */
+  setLoopRange(startBeat: number | null, endBeat: number | null) {
+    this.loopStartBeat = startBeat ?? 0
+    this.loopEndBeat = endBeat
+    const PPQ = Tone.Transport.PPQ
+    this.applyLoopRange((b) => Math.round(b * PPQ) + 'i')
+  }
+
+  setSwing(v: number) {
+    Tone.Transport.swing = v
   }
 
   // When not looping, stop cleanly one bar-length after the last beat.
@@ -163,7 +185,9 @@ class PlaybackEngine {
       this.click(time, beat % 4 === 0)
     }, '4n', 0)
 
-    Tone.Transport.start(startTime)
+    // Start at the A point when a section loop is active.
+    const offsetTicks = Math.round(this.loopStartBeat * Tone.Transport.PPQ)
+    Tone.Transport.start(startTime, `${offsetTicks}i`)
     usePlayer.getState().set({ isPlaying: true })
     this.tick()
   }
