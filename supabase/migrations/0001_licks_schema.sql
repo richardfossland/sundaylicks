@@ -53,5 +53,8 @@ create policy "read published" on licks.licks
 -- and seeding use the service role (bypasses RLS) via scripts/seed.mjs.
 
 -- Ensure the API roles can reach the schema + table (RLS still governs rows).
-grant usage on schema licks to anon, authenticated;
+-- anon/authenticated: read only (RLS = published). service_role: full write,
+-- since it powers the seed script + the /api/submit + /api/admin write paths.
+grant usage on schema licks to anon, authenticated, service_role;
 grant select on licks.licks to anon, authenticated;
+grant all privileges on licks.licks to service_role;
