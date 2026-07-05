@@ -3,20 +3,22 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
-import type { Lick, Category, Difficulty } from '@/types/lick'
+import type { Lick, Category, Genre, Difficulty } from '@/types/lick'
 import { FALLBACK_LICKS, fetchLicks } from '@/lib/licks'
 import { getProgress, type Progress } from '@/lib/progress'
 import { LickCard } from '@/components/LickCard'
-import { CATEGORY_LABEL, CATEGORY_ORDER, DIFFICULTY_LABEL } from '@/lib/labels'
+import { CATEGORY_LABEL, CATEGORY_ORDER, GENRE_LABEL, GENRE_ORDER, DIFFICULTY_LABEL } from '@/lib/labels'
 import { cn } from '@/lib/cn'
 
 type CatFilter = Category | 'all'
+type GenreFilter = Genre | 'all'
 type DiffFilter = Difficulty | 'all'
 
 export default function LibraryPage() {
   // Start with the bundled licks for instant paint; refresh from Supabase.
   const [licks, setLicks] = useState<Lick[]>(FALLBACK_LICKS)
   const [cat, setCat] = useState<CatFilter>('all')
+  const [genre, setGenre] = useState<GenreFilter>('all')
   const [diff, setDiff] = useState<DiffFilter>('all')
   const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {} })
 
@@ -36,12 +38,20 @@ export default function LibraryPage() {
     return CATEGORY_ORDER.filter((c) => present.has(c))
   }, [licks])
 
+  const genres = useMemo(() => {
+    const present = new Set(licks.map((l) => l.genre))
+    return GENRE_ORDER.filter((g) => present.has(g))
+  }, [licks])
+
   const filtered = useMemo(
     () =>
       licks.filter(
-        (l) => (cat === 'all' || l.category === cat) && (diff === 'all' || l.difficulty === diff),
+        (l) =>
+          (cat === 'all' || l.category === cat) &&
+          (genre === 'all' || l.genre === genre) &&
+          (diff === 'all' || l.difficulty === diff),
       ),
-    [licks, cat, diff],
+    [licks, cat, genre, diff],
   )
 
   return (
@@ -64,6 +74,16 @@ export default function LibraryPage() {
 
       {/* Filters */}
       <div className="mb-8 flex flex-col gap-3">
+        <FilterRow label="Sjanger">
+          <Chip active={genre === 'all'} onClick={() => setGenre('all')}>
+            Alle
+          </Chip>
+          {genres.map((g) => (
+            <Chip key={g} active={genre === g} onClick={() => setGenre(g)}>
+              {GENRE_LABEL[g]}
+            </Chip>
+          ))}
+        </FilterRow>
         <FilterRow label="Kategori">
           <Chip active={cat === 'all'} onClick={() => setCat('all')}>
             Alle

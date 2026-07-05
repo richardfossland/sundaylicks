@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Check } from 'lucide-react'
 import type { Lick } from '@/types/lick'
-import { CATEGORY_LABEL, DIFFICULTY_LABEL, difficultyDots } from '@/lib/labels'
+import { CATEGORY_LABEL, GENRE_LABEL, DIFFICULTY_LABEL, difficultyDots } from '@/lib/labels'
 import { KEY_NAMES } from '@/lib/music'
 
 export function LickCard({
@@ -27,9 +27,14 @@ export function LickCard({
           )}
           {lick.name}
         </h3>
-        <span className="shrink-0 rounded-full border border-[var(--color-border)] bg-[var(--color-raised)] px-2.5 py-0.5 text-xs text-[var(--color-muted)]">
-          {CATEGORY_LABEL[lick.category]}
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span className="rounded-full border border-[var(--color-amber)]/40 bg-[var(--color-amber)]/10 px-2.5 py-0.5 text-xs text-[var(--color-amber)]">
+            {GENRE_LABEL[lick.genre]}
+          </span>
+          <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-raised)] px-2.5 py-0.5 text-xs text-[var(--color-muted)]">
+            {CATEGORY_LABEL[lick.category]}
+          </span>
+        </div>
       </div>
 
       {lick.description && (

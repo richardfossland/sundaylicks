@@ -12,6 +12,19 @@ export type Category =
   | 'fill'
   | 'ending'
   | 'intro'
+  | 'comp'
+  | 'groove'
+
+export type Genre =
+  | 'gospel'
+  | 'worship'
+  | 'jazz'
+  | 'blues'
+  | 'boogie'
+  | 'neosoul'
+  | 'latin'
+  | 'classical'
+  | 'rock'
 
 export type Difficulty = 1 | 2 | 3 // 1 = nybegynner, 2 = middels, 3 = avansert
 
@@ -42,6 +55,7 @@ export interface Lick {
   name: string
   description: string | null
   category: Category
+  genre: Genre
   difficulty: Difficulty
   original_key: number // 0–11, 0 = C
   default_bpm: number

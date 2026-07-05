@@ -1,4 +1,4 @@
-import type { Category, Difficulty } from '@/types/lick'
+import type { Category, Genre, Difficulty } from '@/types/lick'
 
 export const CATEGORY_LABEL: Record<Category, string> = {
   turnaround: 'Turnaround',
@@ -7,10 +7,28 @@ export const CATEGORY_LABEL: Record<Category, string> = {
   fill: 'Fill',
   ending: 'Avslutning',
   intro: 'Intro',
+  comp: 'Komp',
+  groove: 'Groove',
 }
 
 export const CATEGORY_ORDER: Category[] = [
-  'intro', 'turnaround', 'two-five-one', 'run', 'fill', 'ending',
+  'intro', 'turnaround', 'two-five-one', 'run', 'fill', 'ending', 'comp', 'groove',
+]
+
+export const GENRE_LABEL: Record<Genre, string> = {
+  gospel: 'Gospel',
+  worship: 'Lovsang',
+  jazz: 'Jazz',
+  blues: 'Blues',
+  boogie: 'Boogie-woogie',
+  neosoul: 'Neo-soul',
+  latin: 'Latin',
+  classical: 'Klassisk',
+  rock: 'Rock/Pop',
+}
+
+export const GENRE_ORDER: Genre[] = [
+  'gospel', 'worship', 'jazz', 'blues', 'boogie', 'neosoul', 'latin', 'classical', 'rock',
 ]
 
 export const DIFFICULTY_LABEL: Record<Difficulty, string> = {

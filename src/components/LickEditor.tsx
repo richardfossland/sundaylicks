@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from 'react'
 import { Play, Square, Trash2, Plus, Send, Loader2 } from 'lucide-react'
-import type { LickNote, LickChord, Category, Difficulty, Hand, Lick } from '@/types/lick'
+import type { LickNote, LickChord, Category, Genre, Difficulty, Hand, Lick } from '@/types/lick'
 import { submissionSchema } from '@/lib/validation'
 import { getUserId } from '@/lib/identity'
 import { getEngine } from '@/lib/playback'
 import { usePlayer } from '@/lib/store'
 import { KEY_NAMES, NOTE_NAMES, isBlackKey, pitchClass, noteName } from '@/lib/music'
-import { CATEGORY_LABEL, CATEGORY_ORDER, DIFFICULTY_LABEL } from '@/lib/labels'
+import { CATEGORY_LABEL, CATEGORY_ORDER, GENRE_LABEL, GENRE_ORDER, DIFFICULTY_LABEL } from '@/lib/labels'
 import { cn } from '@/lib/cn'
 
 const LO = 36 // C2
@@ -32,6 +32,7 @@ export function LickEditor() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState<Category>('run')
+  const [genre, setGenre] = useState<Genre>('gospel')
   const [difficulty, setDifficulty] = useState<Difficulty>(1)
   const [originalKey, setOriginalKey] = useState(0)
   const [bpm, setBpm] = useState(90)
@@ -57,6 +58,7 @@ export function LickEditor() {
       name,
       description: description.trim() ? description.trim() : null,
       category,
+      genre,
       difficulty,
       original_key: originalKey,
       default_bpm: bpm,
@@ -69,7 +71,7 @@ export function LickEditor() {
         .map((t) => t.trim())
         .filter(Boolean),
     }),
-    [name, description, category, difficulty, originalKey, bpm, beats, notes, chords, tags],
+    [name, description, category, genre, difficulty, originalKey, bpm, beats, notes, chords, tags],
   )
 
   const validation = useMemo(() => submissionSchema.safeParse(content), [content])
@@ -138,6 +140,15 @@ export function LickEditor() {
             {CATEGORY_ORDER.map((c) => (
               <option key={c} value={c}>
                 {CATEGORY_LABEL[c]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Sjanger">
+          <select value={genre} onChange={(e) => setGenre(e.target.value as Genre)} className={inputCls}>
+            {GENRE_ORDER.map((g) => (
+              <option key={g} value={g}>
+                {GENRE_LABEL[g]}
               </option>
             ))}
           </select>

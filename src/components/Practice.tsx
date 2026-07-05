@@ -9,7 +9,7 @@ import { transposedNotes, transposedChords } from '@/lib/transpose'
 import { getEngine } from '@/lib/playback'
 import { usePlayer } from '@/lib/store'
 import { KEY_NAMES } from '@/lib/music'
-import { CATEGORY_LABEL, DIFFICULTY_LABEL, difficultyDots } from '@/lib/labels'
+import { CATEGORY_LABEL, GENRE_LABEL, DIFFICULTY_LABEL, difficultyDots } from '@/lib/labels'
 import { parseShare, buildShare } from '@/lib/share'
 import { recordPractice } from '@/lib/progress'
 import { useWaitMode } from '@/lib/useWaitMode'
@@ -200,6 +200,9 @@ export function Practice({ slug }: { slug: string }) {
 
       <header className="mb-6">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--color-muted)]">
+          <span className="rounded-full border border-[var(--color-amber)]/40 bg-[var(--color-amber)]/10 px-2.5 py-0.5 text-[var(--color-amber)]">
+            {GENRE_LABEL[lick.genre]}
+          </span>
           <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-raised)] px-2.5 py-0.5">
             {CATEGORY_LABEL[lick.category]}
           </span>
