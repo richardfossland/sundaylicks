@@ -56,9 +56,23 @@ Se `src/types/lick.ts`. Kort:
 - `chords`: `[{ t, d, r, q, b? }]` — start, varighet, grunntone (pitch class
   0–11), kvalitet (`''`, `m7`, `7`, `maj7`, `m`, `sus4` …), valgfri basstone.
 
+## Fase 4 — brukerbidrag
+
+Brukere kan bygge og sende inn egne licks på `/submit` (rutenett-editor med
+lyd-forhåndsvisning). Innsendinger og moderasjon skrives av **service-rollen**
+via server-ruter — RLS forblir låst til anon-lesing (ingen anon-skriv):
+
+- `POST /api/submit` — offentlig, zod-validert, lagrer `status='submitted'`.
+- `/admin` + `/api/admin/licks` — passordbeskyttet (ADMIN_PASSWORD) kø der du
+  godkjenner (→ `published`) eller avviser (→ slett).
+
+Krever to Worker-secrets (`SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_PASSWORD`); uten
+dem svarer skrive-rutene 503, mens lesing fungerer som normalt.
+
 ## Status
 
-Fase 1 (MVP): bibliotek + øvingsvisning med sampler-avspilling, opplyst
-klaviatur, live tempo (40–180), transponering til alle 12 tonearter, loop,
-håndseparasjon, akkordskjema og pianorull. Notasjon (VexFlow), øvemodus med
-økende tempo og Web MIDI-input kommer i fase 2–3.
+Fase 1–4 komplett: bibliotek + øvingsvisning (sampler, opplyst klaviatur, live
+tempo 40–180, transponering til alle 12 tonearter, loop, håndseparasjon,
+akkordskjema, pianorull), VexFlow-notasjon, delbar URL-state, 20 kuraterte
+licks, øvemodus (vent-modus m/ Web MIDI eller klikk), auto-tempo-trapp, lokal
+fremdrift, og brukerbidrag med admin-moderasjon.
