@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Plus, Heart, Play, Trash2, ListMusic, Search } from 'lucide-react'
+import { Plus, Heart, Play, Trash2, ListMusic, Search, BarChart3 } from 'lucide-react'
 import type { Lick, Category, Genre, Difficulty } from '@/types/lick'
 import { FALLBACK_LICKS, fetchLicks } from '@/lib/licks'
 import { getProgress, type Progress } from '@/lib/progress'
@@ -118,12 +118,20 @@ export default function LibraryPage() {
             justerbart tempo og transponering til hvilken som helst toneart.
           </p>
         </div>
-        <Link
-          href="/submit"
-          className="flex shrink-0 items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm text-[var(--color-ivory)] transition-colors hover:border-[var(--color-amber)]/60"
-        >
-          <Plus className="h-4 w-4" /> Send inn en lick
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href="/stats"
+            className="flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm text-[var(--color-ivory)] transition-colors hover:border-[var(--color-amber)]/60"
+          >
+            <BarChart3 className="h-4 w-4" /> Fremgang
+          </Link>
+          <Link
+            href="/submit"
+            className="flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm text-[var(--color-ivory)] transition-colors hover:border-[var(--color-amber)]/60"
+          >
+            <Plus className="h-4 w-4" /> Send inn en lick
+          </Link>
+        </div>
       </header>
 
       {/* Collections: favorites + practice lists */}

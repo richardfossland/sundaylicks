@@ -21,6 +21,8 @@ interface Props {
   expected?: Set<number>
   /** Wait-mode: transient hit/miss feedback per pressed key. */
   feedback?: Map<number, Feedback>
+  /** Chord-tone overlay: mark keys whose pitch class is a tone of the current chord. */
+  overlay?: { root: number; tones: Set<number> }
   /** Make keys playable — click/tap feeds a note-on. */
   onKeyPress?: (midi: number) => void
 }
@@ -34,7 +36,23 @@ function padToC(min: number, max: number): [number, number] {
   return [lo, hi]
 }
 
-export function Keyboard({ notes, currentBeat, expected, feedback, onKeyPress }: Props) {
+export function Keyboard({ notes, currentBeat, expected, feedback, overlay, onKeyPress }: Props) {
+  const overlayDot = (m: number, black: boolean) => {
+    if (!overlay || !overlay.tones.has(pitchClass(m))) return null
+    const isRoot = pitchClass(m) === pitchClass(overlay.root)
+    return (
+      <span
+        className="pointer-events-none absolute left-1/2 -translate-x-1/2 rounded-full"
+        style={{
+          bottom: black ? 4 : 20,
+          width: isRoot ? 8 : 6,
+          height: isRoot ? 8 : 6,
+          background: isRoot ? 'var(--color-amber)' : 'var(--color-sea)',
+          opacity: 0.85,
+        }}
+      />
+    )
+  }
   const [lo, hi] = useMemo(() => {
     // Include expected (wait-mode) pitches in the range so targets are visible.
     const ps = notes.map((n) => n.p)
@@ -99,6 +117,7 @@ export function Keyboard({ notes, currentBeat, expected, feedback, onKeyPress }:
                   {noteName(m)}
                 </span>
               )}
+              {overlayDot(m, false)}
             </div>
           )
         })}
@@ -125,7 +144,9 @@ export function Keyboard({ notes, currentBeat, expected, feedback, onKeyPress }:
                 // @ts-expect-error CSS var for the tailwind shadow-color token
                 '--tw-shadow-color': glow ?? 'transparent',
               }}
-            />
+            >
+              {overlayDot(bm, true)}
+            </div>
           )
         })}
       </div>

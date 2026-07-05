@@ -43,3 +43,31 @@ export function chordLabel(root: number, quality: string, bass?: number): string
 export function secondsPerBeat(bpm: number): number {
   return 60 / bpm
 }
+
+// Chord quality → semitone intervals from the root, for the keyboard overlay.
+const CHORD_INTERVALS: Record<string, number[]> = {
+  '': [0, 4, 7],
+  m: [0, 3, 7],
+  '7': [0, 4, 7, 10],
+  maj7: [0, 4, 7, 11],
+  m7: [0, 3, 7, 10],
+  m7b5: [0, 3, 6, 10],
+  dim: [0, 3, 6],
+  sus4: [0, 5, 7],
+  sus2: [0, 2, 7],
+  '6': [0, 4, 7, 9],
+  m6: [0, 3, 7, 9],
+  '9': [0, 4, 7, 10, 2],
+  m9: [0, 3, 7, 10, 2],
+  maj9: [0, 4, 7, 11, 2],
+  add9: [0, 4, 7, 2],
+  '7sus4': [0, 5, 7, 10],
+  '5': [0, 7],
+  aug: [0, 4, 8],
+}
+
+/** Pitch classes (0–11) of a chord's tones, given root pitch class + quality. */
+export function chordPitchClasses(root: number, quality: string): number[] {
+  const iv = CHORD_INTERVALS[quality] ?? CHORD_INTERVALS['']
+  return iv.map((i) => pitchClass(root + i))
+}

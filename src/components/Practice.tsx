@@ -10,7 +10,7 @@ import { transposedNotes, transposedChords } from '@/lib/transpose'
 import { getEngine } from '@/lib/playback'
 import { installAudioUnlock } from '@/lib/audio-unlock'
 import { usePlayer } from '@/lib/store'
-import { KEY_NAMES } from '@/lib/music'
+import { KEY_NAMES, chordPitchClasses } from '@/lib/music'
 import { CATEGORY_LABEL, GENRE_LABEL, DIFFICULTY_LABEL, difficultyDots } from '@/lib/labels'
 import { parseShare, buildShare } from '@/lib/share'
 import { recordPractice } from '@/lib/progress'
@@ -38,6 +38,7 @@ export function Practice({ slug }: { slug: string }) {
   const [hand, setHand] = useState<HandFilter>('both')
   const [loop, setLoop] = useState(true)
   const [view, setView] = useState<View>('roll')
+  const [showOverlay, setShowOverlay] = useState(false)
   const [copied, setCopied] = useState(false)
   const [ramp, setRamp] = useState(false)
   const [swing, setSwing] = useState(0)
@@ -257,6 +258,16 @@ export function Practice({ slug }: { slug: string }) {
     if (s) router.push(`/lick/${s}?${listCtx.kind}=${listCtx.id}&i=${idx}`)
   }
 
+  // Chord-tone overlay: tones of the chord active at the current beat.
+  const overlayBeat = practiceOn ? -1 : isPlaying ? currentBeat : 0
+  const overlay = showOverlay
+    ? (() => {
+        const c =
+          chords.find((ch) => ch.t - 1e-6 <= overlayBeat && overlayBeat < ch.t + ch.d - 1e-6) ?? chords[0]
+        return c ? { root: c.r, tones: new Set(chordPitchClasses(c.r, c.q)) } : undefined
+      })()
+    : undefined
+
   return (
     <main className="mx-auto max-w-4xl px-4 py-6 sm:py-10">
       <div className="mb-6 flex items-center justify-between gap-3">
@@ -321,19 +332,35 @@ export function Practice({ slug }: { slug: string }) {
           currentBeat={practiceOn ? -1 : isPlaying ? currentBeat : 0}
           expected={practiceOn ? waitMode.expected : undefined}
           feedback={practiceOn ? waitMode.feedback : undefined}
+          overlay={overlay}
           onKeyPress={(m) => inputRef.current(m)}
         />
         <ChordStrip chords={chords} beats={lick.beats} currentBeat={practiceOn ? -1 : currentBeat} />
 
         {/* View toggle + share */}
-        <div className="flex items-center justify-between">
-          <div className="flex gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-1">
-            <ViewTab active={view === 'roll'} onClick={() => setView('roll')} icon={<BarChart3 className="h-4 w-4" />}>
-              Pianorull
-            </ViewTab>
-            <ViewTab active={view === 'notation'} onClick={() => setView('notation')} icon={<Music className="h-4 w-4" />}>
-              Noter
-            </ViewTab>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-1">
+              <ViewTab active={view === 'roll'} onClick={() => setView('roll')} icon={<BarChart3 className="h-4 w-4" />}>
+                Pianorull
+              </ViewTab>
+              <ViewTab active={view === 'notation'} onClick={() => setView('notation')} icon={<Music className="h-4 w-4" />}>
+                Noter
+              </ViewTab>
+            </div>
+            <button
+              onClick={() => setShowOverlay((v) => !v)}
+              aria-pressed={showOverlay}
+              title="Vis tonene i gjeldende akkord på klaviaturet"
+              className={cn(
+                'flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors',
+                showOverlay
+                  ? 'border-[var(--color-sea)] bg-[var(--color-sea)]/15 text-[var(--color-sea)]'
+                  : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ivory)]',
+              )}
+            >
+              <Music className="h-4 w-4" /> Akkordtoner
+            </button>
           </div>
           <div className="flex items-center gap-2">
             <ExportButton lick={lick} targetKey={targetKey} bpm={bpm} />
