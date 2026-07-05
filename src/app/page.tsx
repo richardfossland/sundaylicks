@@ -85,8 +85,8 @@ export default function LibraryPage() {
         <div>
           <h1 className="font-display text-4xl text-[var(--color-ivory)] sm:text-5xl">SundayLicks</h1>
           <p className="mt-2 max-w-xl text-[var(--color-muted)]">
-            Øv gospel-, lovsang- og jazzlicks med opplyst klaviatur, live tempo og transponering til
-            alle tonearter. Alt spilles fra noter — aldri lyd — så det aldri knirker.
+            Kuraterte piano-licks fra gospel og lovsang til jazz, blues og boogie. Opplyst klaviatur,
+            justerbart tempo og transponering til hvilken som helst toneart.
           </p>
         </div>
         <Link
