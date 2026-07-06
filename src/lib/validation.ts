@@ -15,7 +15,10 @@ export const chordSchema = z.object({
   t: z.number().min(0),
   d: z.number().positive(),
   r: z.number().int().min(0).max(11),
-  q: z.string(),
+  // Bound the quality string — it is rendered as a chord label; no legit value
+  // exceeds a few chars (seed uses ≤4). Not enum'd because the seed set is
+  // broader than the editor's palette.
+  q: z.string().max(12),
   b: z.number().int().min(0).max(11).optional(),
 })
 
@@ -31,11 +34,15 @@ export const lickContent = z.object({
   difficulty: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   original_key: z.number().int().min(0).max(11),
   default_bpm: z.number().int().min(20).max(300),
-  beats: z.number().positive(),
+  // Upper bounds bound the DB row size AND the client render cost: an unbounded
+  // `beats` produces a giant SVG width in Notation.tsx, and unbounded arrays let
+  // one submission freeze the admin browser. Generous vs. real data (seed max:
+  // 32 beats, 6 tags, small note/chord counts).
+  beats: z.number().positive().max(64),
   time_signature: z.string().regex(/^\d+\/\d+$/),
-  notes: z.array(noteSchema).min(1),
-  chords: z.array(chordSchema),
-  tags: z.array(z.string()),
+  notes: z.array(noteSchema).min(1).max(512),
+  chords: z.array(chordSchema).max(64),
+  tags: z.array(z.string().max(40)).max(32),
 })
 
 // t + d must stay within `beats`, for both notes and chords.
