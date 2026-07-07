@@ -30,8 +30,21 @@ import { ExportButton } from './ExportButton'
 
 type View = 'roll' | 'notation'
 
-export function Practice({ slug }: { slug: string }) {
-  const [lick, setLick] = useState<Lick | null>(null)
+interface PracticeProps {
+  /** Slug of a published/fallback lick to fetch. Ignored when `lick` is given. */
+  slug: string
+  /**
+   * A fully-formed, already-in-memory Lick to play directly — skips the
+   * fetch entirely and feeds the same practice engine (metronome/loop/wait
+   * mode/transpose/export). Used by the generated-content flows (workstream
+   * D/E) to preview a not-yet-saved lick under a synthetic slug (e.g. one
+   * that isn't published, or doesn't exist in the DB at all).
+   */
+  lick?: Lick
+}
+
+export function Practice({ slug, lick: lickProp }: PracticeProps) {
+  const [lick, setLick] = useState<Lick | null>(lickProp ?? null)
   const [notFound, setNotFound] = useState(false)
   const [targetKey, setTargetKey] = useState(0)
   const [bpm, setBpm] = useState(80)
@@ -75,12 +88,14 @@ export function Practice({ slug }: { slug: string }) {
   const playbackHand: HandFilter = bandMode ? backingHand : hand
 
   // Load the lick once; apply any shared URL state (?key=Eb&bpm=80&hand=R).
+  // When `lick` is passed in directly (generated-content preview), skip the
+  // fetch and apply the same URL-state logic to it — same engine, no network.
   useEffect(() => {
     let alive = true
     loadCollections()
-    fetchLick(slug).then((l) => {
+
+    const applyLick = (l: Lick) => {
       if (!alive) return
-      if (!l) return setNotFound(true)
       const q = new URLSearchParams(window.location.search)
       const share = parseShare(window.location.search)
       const listId = q.get('list')
@@ -96,11 +111,24 @@ export function Practice({ slug }: { slug: string }) {
       setLoopA(0)
       if (share.hand) setHand(share.hand)
       syncedRef.current = true
+    }
+
+    if (lickProp) {
+      applyLick(lickProp)
+      return () => {
+        alive = false
+      }
+    }
+
+    fetchLick(slug).then((l) => {
+      if (!alive) return
+      if (!l) return setNotFound(true)
+      applyLick(l)
     })
     return () => {
       alive = false
     }
-  }, [slug])
+  }, [slug, lickProp])
 
   // Reflect practice state back into the URL (after the initial load applied it).
   const syncedRef = useRef(false)

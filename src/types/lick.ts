@@ -35,6 +35,15 @@ export type Difficulty = 1 | 2 | 3 // 1 = nybegynner, 2 = middels, 3 = avansert
 
 export type LickStatus = 'published' | 'draft' | 'submitted'
 
+/** Tonal mode the lick is written in. Free text at the DB layer (see
+ * 0004_theory_metadata.sql) — this union is the app's known set. */
+export type Mode = 'major' | 'minor'
+
+/** What kind of practice item this row is. 'lick' is the default and covers
+ * every hand-authored library lick; other kinds (e.g. 'transition') are
+ * produced by the generated-content workstreams. Free text at the DB layer. */
+export type Kind = 'lick' | 'transition' | string
+
 /** A single note event inside a lick. */
 export interface LickNote {
   p: number // MIDI pitch, 60 = C4
@@ -72,6 +81,13 @@ export interface Lick {
   status: LickStatus
   submitted_by?: string | null
   created_at?: string
+  /** Defaults to 'major' — optional so pre-existing rows/data (seed licks,
+   * old DB rows before 0004_theory_metadata.sql) still type-check. */
+  mode?: Mode
+  /** Defaults to [] — see `mode`. */
+  harmonic_function?: string[]
+  /** Defaults to 'lick' — see `mode`. */
+  kind?: Kind
 }
 
 /** The subset an author writes (DB fills id/status/created_at). */

@@ -43,6 +43,16 @@ export const lickContent = z.object({
   notes: z.array(noteSchema).min(1).max(512),
   chords: z.array(chordSchema).max(64),
   tags: z.array(z.string().max(40)).max(32),
+  // Theory metadata (0004_theory_metadata.sql). All three are optional with
+  // defaults so every pre-existing lick (seed data + old submissions, none of
+  // which carry these fields) still validates unchanged.
+  mode: z.enum(['major', 'minor']).default('major'),
+  // Scale-degree / functional tags, e.g. ['ii', 'V7'] or ['tritone-sub'].
+  // Free text (not enum'd) — same rationale as `genre` above.
+  harmonic_function: z.array(z.string().max(24)).max(16).default([]),
+  // Distinguishes plain library licks ('lick', the default) from other
+  // generated shapes (e.g. 'transition'). Free text — see `genre`.
+  kind: z.string().min(1).max(24).default('lick'),
 })
 
 // t + d must stay within `beats`, for both notes and chords.
