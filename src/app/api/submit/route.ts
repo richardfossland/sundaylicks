@@ -7,6 +7,11 @@ export const dynamic = 'force-dynamic'
 // Public endpoint: accept a user-contributed lick, validate it, and insert it
 // with status='submitted' via the service role (RLS stays locked to anon reads).
 // The row is invisible to the public until an admin approves it.
+//
+// Also doubles as the "curate to library" route for generated content
+// (workstream D/E): the body may include `kind` (e.g. 'transition'), `mode`,
+// and `harmonic_function` — submissionSchema defaults them to 'lick'/'major'/[]
+// when omitted, so ordinary submissions are unaffected.
 
 function slugify(name: string): string {
   const base = name

@@ -106,3 +106,59 @@ describe("seedLickSchema", () => {
     expect(seedLickSchema.safeParse({ ...base, slug: "Bad Slug" }).success).toBe(false);
   });
 });
+
+describe("theory metadata — mode / harmonic_function / kind (0004_theory_metadata)", () => {
+  it("validates a lick with none of the new fields (backward compat) and fills defaults", () => {
+    const r = submissionSchema.safeParse(base);
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.mode).toBe("major");
+      expect(r.data.harmonic_function).toEqual([]);
+      expect(r.data.kind).toBe("lick");
+    }
+  });
+
+  it("validates a lick that supplies all three new fields", () => {
+    const r = submissionSchema.safeParse({
+      ...base,
+      mode: "minor",
+      harmonic_function: ["ii", "V7"],
+      kind: "transition",
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.mode).toBe("minor");
+      expect(r.data.harmonic_function).toEqual(["ii", "V7"]);
+      expect(r.data.kind).toBe("transition");
+    }
+  });
+
+  it("rejects an unknown mode", () => {
+    expect(submissionSchema.safeParse({ ...base, mode: "dorian" }).success).toBe(false);
+  });
+
+  it("rejects an empty kind or an over-long kind", () => {
+    expect(submissionSchema.safeParse({ ...base, kind: "" }).success).toBe(false);
+    expect(submissionSchema.safeParse({ ...base, kind: "x".repeat(25) }).success).toBe(false);
+  });
+
+  it("rejects more than 16 harmonic_function tags or an over-long tag", () => {
+    expect(
+      submissionSchema.safeParse({ ...base, harmonic_function: Array.from({ length: 17 }, () => "ii") })
+        .success,
+    ).toBe(false);
+    expect(
+      submissionSchema.safeParse({ ...base, harmonic_function: ["x".repeat(25)] }).success,
+    ).toBe(false);
+  });
+
+  it("all seed licks still validate against seedLickSchema (no new-field regression)", async () => {
+    const { SEED_LICKS } = await import("@/data/seed-licks");
+    for (const lick of SEED_LICKS) {
+      const r = seedLickSchema.safeParse(lick);
+      expect(r.success, `slug "${lick.slug}" failed: ${!r.success ? JSON.stringify(r.error.issues) : ""}`).toBe(
+        true,
+      );
+    }
+  });
+});
