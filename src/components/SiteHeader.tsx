@@ -9,7 +9,7 @@ import { cn } from '@/lib/cn'
 const NAV_ITEMS = [
   { href: '/', label: 'Dashbord', icon: LayoutDashboard },
   { href: '/utforsk', label: 'Utforsk', icon: Compass },
-  { href: '/transitions', label: 'Overganger', icon: Waypoints, soon: true },
+  { href: '/transitions', label: 'Overganger', icon: Waypoints },
   { href: '/utforsk?mode=favs', label: 'Mine lister', icon: ListMusic, match: '/utforsk?mode=favs' },
   { href: '/stats', label: 'Stats', icon: BarChart3 },
 ] as const
@@ -64,11 +64,6 @@ export function SiteHeader() {
               >
                 <Icon className="h-3.5 w-3.5" />
                 {item.label}
-                {'soon' in item && item.soon && (
-                  <span className="rounded-full bg-[var(--color-sea)]/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-sea)]">
-                    Snart
-                  </span>
-                )}
               </Link>
             )
           })}
