@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Check } from 'lucide-react'
+import { Check, ArrowLeftRight } from 'lucide-react'
 import type { Lick } from '@/types/lick'
 import { CATEGORY_LABEL, GENRE_LABEL, DIFFICULTY_LABEL, difficultyDots } from '@/lib/labels'
 import { KEY_NAMES } from '@/lib/music'
@@ -9,14 +9,26 @@ export function LickCard({
   lick,
   practiced,
   bestBpm,
+  targetKey,
 }: {
   lick: Lick
   practiced?: boolean
   bestBpm?: number
+  /**
+   * Pitch class (0–11) to display/open the lick in, e.g. the dashboard's
+   * currently selected "toneart". Defaults to the lick's own key. The lick
+   * page reads the same `?key=` share param already used for transposed
+   * links (see lib/share.ts), so opening from here lands already transposed.
+   */
+  targetKey?: number
 }) {
+  const displayKey = targetKey ?? lick.original_key
+  const transposed = targetKey !== undefined && targetKey !== lick.original_key
+  const href = transposed ? `/lick/${lick.slug}?key=${KEY_NAMES[targetKey]}` : `/lick/${lick.slug}`
+
   return (
     <Link
-      href={`/lick/${lick.slug}`}
+      href={href}
       className="group flex flex-col gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition-colors hover:border-[var(--color-amber)]/60"
     >
       <div className="flex items-start justify-between gap-3">
@@ -49,7 +61,17 @@ export function LickCard({
         <span className="tracking-widest text-[var(--color-amber)]" title={DIFFICULTY_LABEL[lick.difficulty]}>
           {difficultyDots(lick.difficulty)}
         </span>
-        <span>{KEY_NAMES[lick.original_key]}-dur</span>
+        <span className="inline-flex items-center gap-1">
+          {transposed && (
+            <ArrowLeftRight
+              className="h-3 w-3 text-[var(--color-sea)]"
+              aria-hidden
+            />
+          )}
+          <span title={transposed ? `Transponert fra ${KEY_NAMES[lick.original_key]}-dur` : undefined}>
+            {KEY_NAMES[displayKey]}-dur
+          </span>
+        </span>
         <span>{lick.default_bpm} BPM</span>
         {bestBpm ? <span className="text-[var(--color-sea)]">beste {bestBpm}</span> : null}
       </div>

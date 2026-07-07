@@ -11,6 +11,10 @@
   --color-amber:   #E8A33D; /* right hand */
   --color-sea:     #5FB3A1; /* left hand */
   --color-black-key: #17110C;
+
+  /* Text-on-accent ink — one place to keep amber/sea contrast text correct. */
+  --color-ink-on-amber: #171210;
+  --color-ink-on-sea:   #0E1A17;
 }
 
 @theme inline {
@@ -24,6 +28,8 @@
   --color-muted: var(--color-muted);
   --color-amber: var(--color-amber);
   --color-sea: var(--color-sea);
+  --color-ink-on-amber: var(--color-ink-on-amber);
+  --color-ink-on-sea: var(--color-ink-on-sea);
 }
 
 * { box-sizing: border-box; }
