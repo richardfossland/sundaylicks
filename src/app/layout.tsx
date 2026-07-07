@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next'
 import { Fraunces, Instrument_Sans } from 'next/font/google'
-import { SiteHeader } from '@/components/SiteHeader'
 import './globals.css'
 
 const instrument = Instrument_Sans({ subsets: ['latin'], variable: '--font-instrument' })
@@ -18,11 +17,14 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
+// The shell is mode-based now (see `AppShell`'s contract comment) rather
+// than a single global header, so the root layout stays a bare scaffold —
+// fonts, background, and the `<html>`/`<body>` tags — and each route mounts
+// its own `<AppShell mode="...">` (or none, for mode-agnostic pages).
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="no" className={`${instrument.variable} ${fraunces.variable}`}>
       <body className="min-h-screen bg-[var(--color-scene)] font-sans text-[var(--color-ivory)] antialiased">
-        <SiteHeader />
         {children}
       </body>
     </html>

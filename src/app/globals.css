@@ -8,13 +8,20 @@
   --color-border:  #3A2D22;
   --color-ivory:   #F3EAD9; /* white keys / text */
   --color-muted:   #A99C87;
-  --color-amber:   #E8A33D; /* right hand */
-  --color-sea:     #5FB3A1; /* left hand */
+  --color-amber:   #E8A33D; /* right hand · Øv-modus */
+  --color-sea:     #5FB3A1; /* left hand · Kurs-modus */
+  --color-ember:   #D98A6E; /* Spill smartere-modus — warm rose/terracotta, third leg of the palette */
   --color-black-key: #17110C;
 
-  /* Text-on-accent ink — one place to keep amber/sea contrast text correct. */
+  /* Text-on-accent ink — one place to keep amber/sea/ember contrast text correct. */
   --color-ink-on-amber: #171210;
   --color-ink-on-sea:   #0E1A17;
+  --color-ink-on-ember: #241511;
+
+  /* Single tokenised error/danger colour (was hardcoded #C7534E in several
+   * components — new call sites should use this; existing ones are outside
+   * W1's scope to migrate). */
+  --color-danger: #C7534E;
 }
 
 @theme inline {
@@ -28,8 +35,11 @@
   --color-muted: var(--color-muted);
   --color-amber: var(--color-amber);
   --color-sea: var(--color-sea);
+  --color-ember: var(--color-ember);
   --color-ink-on-amber: var(--color-ink-on-amber);
   --color-ink-on-sea: var(--color-ink-on-sea);
+  --color-ink-on-ember: var(--color-ink-on-ember);
+  --color-danger: var(--color-danger);
 }
 
 * { box-sizing: border-box; }
