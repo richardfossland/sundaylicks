@@ -27,10 +27,15 @@ export function angleForIndex(i: number, total = 12): number {
   return (360 / total) * i
 }
 
-/** A point on a circle of radius `r` around (cx, cy), at `angleDeg` clockwise from the top. */
+/** A point on a circle of radius `r` around (cx, cy), at `angleDeg` clockwise from the top.
+ * Coordinates are rounded to 3 decimals: Math.sin/cos are not bit-identical across
+ * JS engines, so the raw floats stringify differently on the Node server vs. the
+ * browser and trip a React SVG hydration mismatch. Rounding makes both sides emit
+ * the same attribute string (sub-pixel precision in a 300-unit viewBox is ample). */
 export function pointOnCircle(cx: number, cy: number, r: number, angleDeg: number): Point {
   const rad = (angleDeg * Math.PI) / 180
-  return { x: cx + r * Math.sin(rad), y: cy - r * Math.cos(rad) }
+  const round = (n: number) => Math.round(n * 1000) / 1000
+  return { x: round(cx + r * Math.sin(rad)), y: round(cy - r * Math.cos(rad)) }
 }
 
 /** Position (0–11) of a pitch class around the circle of fifths. */

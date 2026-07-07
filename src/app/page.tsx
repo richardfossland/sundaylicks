@@ -125,14 +125,12 @@ export default function DashboardPage() {
           icon={<Waypoints className="h-5 w-5" />}
           title="Overganger"
           description="Kvintsirkelen som kart — finn en naturlig vei fra én toneart til en annen."
-          soon
         />
         <PromoCard
           href="/spice"
           icon={<Sparkles className="h-5 w-5" />}
           title="Spice up"
           description="Krydre en enkel progresjon med gjennomgangsakkorder og reharmonisering."
-          soon
         />
       </section>
     </main>
