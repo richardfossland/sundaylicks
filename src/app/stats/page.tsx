@@ -55,7 +55,7 @@ export default function StatsPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
       <Link href="/" className="mb-6 inline-flex items-center gap-1.5 text-sm text-[var(--color-muted)] hover:text-[var(--color-ivory)]">
-        <ArrowLeft className="h-4 w-4" /> Biblioteket
+        <ArrowLeft className="h-4 w-4" /> Dashbord
       </Link>
       <h1 className="font-display text-4xl text-[var(--color-ivory)]">Din fremgang</h1>
       <p className="mt-2 text-[var(--color-muted)]">Lagret lokalt på denne enheten.</p>

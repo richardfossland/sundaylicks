@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Fraunces, Instrument_Sans } from 'next/font/google'
+import { SiteHeader } from '@/components/SiteHeader'
 import './globals.css'
 
 const instrument = Instrument_Sans({ subsets: ['latin'], variable: '--font-instrument' })
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="no" className={`${instrument.variable} ${fraunces.variable}`}>
       <body className="min-h-screen bg-[var(--color-scene)] font-sans text-[var(--color-ivory)] antialiased">
+        <SiteHeader />
         {children}
       </body>
     </html>
