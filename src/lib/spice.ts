@@ -132,6 +132,24 @@ export function fillsForChord(licks: Lick[], root: number, quality: string, genr
 /** Ranked simple → advanced order, used to cap results at a chosen "spice" level. */
 export const LEVEL_ORDER: TransitionLevel[] = ['simple', 'intermediate', 'advanced']
 
+/** Norwegian labels for the single merged "hvor avansert"-control (/spill's
+ * Krydre tab) — one 3-way choice that used to be two overlapping controls
+ * ("Nivå"-filter + "enkelt ↔ spice it up"-slider). */
+export const LEVEL_LABEL: Record<TransitionLevel, string> = {
+  simple: 'Hold det enkelt',
+  intermediate: 'Middels',
+  advanced: 'Spice it up',
+}
+
+/** The same 3-way level, expressed as a library `Difficulty` — lets one
+ * control also filter the "bibliotek i denne tonearten" section, which is
+ * keyed by difficulty rather than by `TransitionLevel`. */
+export const LEVEL_TO_DIFFICULTY: Record<TransitionLevel, Difficulty> = {
+  simple: 1,
+  intermediate: 2,
+  advanced: 3,
+}
+
 /** Reharm suggestions for a single chord, capped to everything at or below `level`. */
 export function reharmSuggestions(
   key: Key,
