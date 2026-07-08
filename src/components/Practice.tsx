@@ -3,7 +3,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Music, BarChart3, Share2, Check, Piano, Plug, ChevronLeft, ChevronRight, Users, Repeat } from 'lucide-react'
+import {
+  ArrowLeft,
+  Music,
+  BarChart3,
+  Share2,
+  Check,
+  Piano,
+  Plug,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Users,
+  Repeat,
+  SlidersHorizontal,
+} from 'lucide-react'
 import type { Lick, HandFilter } from '@/types/lick'
 import { fetchLick } from '@/lib/licks'
 import { transposedNotes, transposedChords } from '@/lib/transpose'
@@ -64,6 +78,7 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
   const [midi, setMidi] = useState<MidiConnection | null>(null)
   const [midiError, setMidiError] = useState<string | null>(null)
   const [listCtx, setListCtx] = useState<{ kind: 'list' | 'path'; id: string; index: number } | null>(null)
+  const [toolsOpen, setToolsOpen] = useState(false)
 
   const router = useRouter()
   const loadCollections = useCollections((s) => s.load)
@@ -215,12 +230,36 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
   // MIDI cleanup on unmount.
   useEffect(() => () => midi?.dispose(), [midi])
 
+  // Single "Tilbake" affordance: prefer a real browser back-navigation when we
+  // can tell the previous page was inside the app (same-origin referrer) —
+  // this returns you to wherever you actually came from (a list, a course, a
+  // search). Otherwise fall back to a deterministic, context-correct link:
+  // the library (`/ove`) for a plain lick, or the course/list you were
+  // browsing, carried over via the same `?path=`/`?list=` params the
+  // library/course views already use to build `/lick/[slug]` links.
+  const backHref = listCtx
+    ? listCtx.kind === 'path'
+      ? `/kurs?path=${listCtx.id}`
+      : `/ove?list=${listCtx.id}`
+    : '/ove'
+  const goBack = (e: React.MouseEvent) => {
+    if (typeof document === 'undefined' || !document.referrer) return
+    try {
+      if (new URL(document.referrer).origin === window.location.origin) {
+        e.preventDefault()
+        router.back()
+      }
+    } catch {
+      /* malformed referrer — fall through to the plain href */
+    }
+  }
+
   if (notFound) {
     return (
       <main className="mx-auto max-w-md px-4 py-24 text-center">
         <p className="text-[var(--color-muted)]">Fant ikke denne licken.</p>
-        <Link href="/" className="mt-4 inline-block text-[var(--color-amber)]">
-          ← Tilbake til biblioteket
+        <Link href={backHref} onClick={goBack} className="mt-4 inline-block text-[var(--color-amber)]">
+          ← Tilbake
         </Link>
       </main>
     )
@@ -296,14 +335,20 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
       })()
     : undefined
 
+  // Whether any advanced tool is currently engaged — surfaced as a dot on the
+  // "Flere verktøy" toggle so a collapsed panel never hides an active state
+  // from the player.
+  const advancedActive = abLoop || practiceOn || bandMode || showOverlay
+
   return (
     <main className="mx-auto max-w-4xl px-4 py-6 sm:py-10">
       <div className="mb-6 flex items-center justify-between gap-3">
         <Link
-          href="/"
+          href={backHref}
+          onClick={goBack}
           className="inline-flex items-center gap-1.5 text-sm text-[var(--color-muted)] hover:text-[var(--color-ivory)]"
         >
-          <ArrowLeft className="h-4 w-4" /> Biblioteket
+          <ArrowLeft className="h-4 w-4" /> Tilbake
         </Link>
         <div className="flex items-center gap-2">
           <AddToListButton slug={lick.slug} />
@@ -365,41 +410,14 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
         />
         <ChordStrip chords={chords} beats={lick.beats} currentBeat={practiceOn ? -1 : currentBeat} />
 
-        {/* View toggle + share */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-1">
-              <ViewTab active={view === 'roll'} onClick={() => setView('roll')} icon={<BarChart3 className="h-4 w-4" />}>
-                Pianorull
-              </ViewTab>
-              <ViewTab active={view === 'notation'} onClick={() => setView('notation')} icon={<Music className="h-4 w-4" />}>
-                Noter
-              </ViewTab>
-            </div>
-            <button
-              onClick={() => setShowOverlay((v) => !v)}
-              aria-pressed={showOverlay}
-              title="Vis tonene i gjeldende akkord på klaviaturet"
-              className={cn(
-                'flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors',
-                showOverlay
-                  ? 'border-[var(--color-sea)] bg-[var(--color-sea)]/15 text-[var(--color-sea)]'
-                  : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ivory)]',
-              )}
-            >
-              <Music className="h-4 w-4" /> Akkordtoner
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            <ExportButton lick={lick} targetKey={targetKey} bpm={bpm} />
-            <button
-              onClick={onShare}
-              className="flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ivory)]"
-            >
-              {copied ? <Check className="h-4 w-4 text-[var(--color-sea)]" /> : <Share2 className="h-4 w-4" />}
-              {copied ? 'Kopiert' : 'Del'}
-            </button>
-          </div>
+        {/* Primær: notasjon/pianorull-veksling */}
+        <div className="flex gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-1 self-start">
+          <ViewTab active={view === 'roll'} onClick={() => setView('roll')} icon={<BarChart3 className="h-4 w-4" />}>
+            Pianorull
+          </ViewTab>
+          <ViewTab active={view === 'notation'} onClick={() => setView('notation')} icon={<Music className="h-4 w-4" />}>
+            Noter
+          </ViewTab>
         </div>
 
         {view === 'roll' ? (
@@ -414,131 +432,7 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
           <Notation notes={notesAll} beats={lick.beats} timeSignature={lick.time_signature} />
         )}
 
-        {/* A-B section loop */}
-        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <button
-            onClick={() => setAbLoop((v) => !v)}
-            aria-pressed={abLoop}
-            className={cn(
-              'flex w-fit items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
-              abLoop
-                ? 'border-[var(--color-amber)] bg-[var(--color-amber)]/15 text-[var(--color-amber)]'
-                : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ivory)]',
-            )}
-          >
-            <Repeat className="h-4 w-4" /> Loop A–B (øv en del)
-          </button>
-          {abLoop && (
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-6">
-              <label className="flex flex-1 items-center gap-2 text-sm text-[var(--color-muted)]">
-                <span className="w-8">A: {loopA}</span>
-                <input
-                  type="range"
-                  min={0}
-                  max={lick.beats - 0.5}
-                  step={0.5}
-                  value={loopA}
-                  onChange={(e) => setLoopA(Math.min(Number(e.target.value), loopB - 0.5))}
-                  className="flex-1 accent-[var(--color-amber)]"
-                />
-              </label>
-              <label className="flex flex-1 items-center gap-2 text-sm text-[var(--color-muted)]">
-                <span className="w-8">B: {loopB}</span>
-                <input
-                  type="range"
-                  min={0.5}
-                  max={lick.beats}
-                  step={0.5}
-                  value={loopB}
-                  onChange={(e) => setLoopB(Math.max(Number(e.target.value), loopA + 0.5))}
-                  className="flex-1 accent-[var(--color-amber)]"
-                />
-              </label>
-            </div>
-          )}
-        </div>
-
-        {/* Wait-mode trainer */}
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => {
-                  setPracticeOn((v) => !v)
-                  if (!practiceOn) setBandMode(false)
-                }}
-                aria-pressed={practiceOn}
-                className={cn(
-                  'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
-                  practiceOn
-                    ? 'border-[var(--color-sea)] bg-[var(--color-sea)]/15 text-[var(--color-sea)]'
-                    : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ivory)]',
-                )}
-              >
-                <Piano className="h-4 w-4" /> Øvemodus (vent-modus)
-              </button>
-              <button
-                onClick={() => {
-                  setBandMode((v) => !v)
-                  if (!bandMode) setPracticeOn(false)
-                }}
-                aria-pressed={bandMode}
-                className={cn(
-                  'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
-                  bandMode
-                    ? 'border-[var(--color-sea)] bg-[var(--color-sea)]/15 text-[var(--color-sea)]'
-                    : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ivory)]',
-                )}
-              >
-                <Users className="h-4 w-4" /> Band-modus
-              </button>
-              {bandMode && (
-                <button
-                  onClick={() => setBackingHand((h) => (h === 'L' ? 'R' : 'L'))}
-                  className="rounded-full border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] hover:text-[var(--color-ivory)]"
-                >
-                  App spiller: {backingHand === 'L' ? 'venstre' : 'høyre'} hånd
-                </button>
-              )}
-            </div>
-
-            {midiSupported() ? (
-              midi ? (
-                <span className="flex items-center gap-1.5 text-sm text-[var(--color-sea)]">
-                  <Plug className="h-4 w-4" /> {midi.deviceNames[0] ?? 'MIDI tilkoblet'}
-                </span>
-              ) : (
-                <button
-                  onClick={onConnectMidi}
-                  className="flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-3.5 py-2 text-sm text-[var(--color-muted)] hover:text-[var(--color-ivory)]"
-                >
-                  <Plug className="h-4 w-4" /> Koble til MIDI-keyboard
-                </button>
-              )
-            ) : (
-              <span className="text-xs text-[var(--color-muted)]">
-                MIDI krever Chrome/Edge — eller klikk tangentene
-              </span>
-            )}
-          </div>
-
-          {practiceOn && (
-            <p className="mt-3 text-sm text-[var(--color-muted)]">
-              Spill de <span className="text-[var(--color-amber)]">markerte</span> tangentene i rekkefølge
-              {waitMode.total > 0 && (
-                <>
-                  {' — '}
-                  <span className="font-display text-[var(--color-ivory)]">
-                    trinn {waitMode.step + 1} / {waitMode.total}
-                  </span>
-                </>
-              )}
-              . Grønt = riktig, rødt = bom. Bruk MIDI eller klikk.
-            </p>
-          )}
-          {midiError && <p className="mt-2 text-xs text-[var(--color-blight,#C7534E)]">{midiError}</p>}
-        </div>
-
+        {/* Primær: kjerne-transport (play/stopp, tempo, toneart, hånd) */}
         <TransportBar
           isPlaying={isPlaying}
           isLoading={isLoading}
@@ -561,6 +455,184 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
           hand={hand}
           onHand={setHand}
         />
+
+        {/* Avansert: progressiv avsløring — akkordtoner, eksport/del, A-B-loop,
+            øve-/vent-modus, band-modus og MIDI flytter bak denne bryteren. */}
+        <div className="flex flex-col gap-4">
+          <button
+            onClick={() => setToolsOpen((v) => !v)}
+            aria-expanded={toolsOpen}
+            className={cn(
+              'flex w-fit items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+              advancedActive
+                ? 'border-[var(--color-amber)] bg-[var(--color-amber)]/10 text-[var(--color-amber)]'
+                : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ivory)]',
+            )}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Flere verktøy
+            {advancedActive && (
+              <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[var(--color-amber)]" />
+            )}
+            <ChevronDown className={cn('h-4 w-4 transition-transform', toolsOpen && 'rotate-180')} />
+          </button>
+
+          {toolsOpen && (
+            <div className="animate-fade-in flex flex-col gap-4">
+              {/* Akkordtoner-overlay + eksport + del */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <button
+                  onClick={() => setShowOverlay((v) => !v)}
+                  aria-pressed={showOverlay}
+                  title="Vis tonene i gjeldende akkord på klaviaturet"
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors',
+                    showOverlay
+                      ? 'border-[var(--color-sea)] bg-[var(--color-sea)]/15 text-[var(--color-sea)]'
+                      : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ivory)]',
+                  )}
+                >
+                  <Music className="h-4 w-4" /> Akkordtoner
+                </button>
+                <div className="flex items-center gap-2">
+                  <ExportButton lick={lick} targetKey={targetKey} bpm={bpm} />
+                  <button
+                    onClick={onShare}
+                    className="flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ivory)]"
+                  >
+                    {copied ? <Check className="h-4 w-4 text-[var(--color-sea)]" /> : <Share2 className="h-4 w-4" />}
+                    {copied ? 'Kopiert' : 'Del'}
+                  </button>
+                </div>
+              </div>
+
+              {/* A-B section loop */}
+              <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+                <button
+                  onClick={() => setAbLoop((v) => !v)}
+                  aria-pressed={abLoop}
+                  className={cn(
+                    'flex w-fit items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                    abLoop
+                      ? 'border-[var(--color-amber)] bg-[var(--color-amber)]/15 text-[var(--color-amber)]'
+                      : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ivory)]',
+                  )}
+                >
+                  <Repeat className="h-4 w-4" /> Loop A–B (øv en del)
+                </button>
+                {abLoop && (
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-6">
+                    <label className="flex flex-1 items-center gap-2 text-sm text-[var(--color-muted)]">
+                      <span className="w-8">A: {loopA}</span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={lick.beats - 0.5}
+                        step={0.5}
+                        value={loopA}
+                        onChange={(e) => setLoopA(Math.min(Number(e.target.value), loopB - 0.5))}
+                        className="flex-1 accent-[var(--color-amber)]"
+                      />
+                    </label>
+                    <label className="flex flex-1 items-center gap-2 text-sm text-[var(--color-muted)]">
+                      <span className="w-8">B: {loopB}</span>
+                      <input
+                        type="range"
+                        min={0.5}
+                        max={lick.beats}
+                        step={0.5}
+                        value={loopB}
+                        onChange={(e) => setLoopB(Math.max(Number(e.target.value), loopA + 0.5))}
+                        className="flex-1 accent-[var(--color-amber)]"
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* Wait-mode trainer */}
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setPracticeOn((v) => !v)
+                        if (!practiceOn) setBandMode(false)
+                      }}
+                      aria-pressed={practiceOn}
+                      className={cn(
+                        'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                        practiceOn
+                          ? 'border-[var(--color-sea)] bg-[var(--color-sea)]/15 text-[var(--color-sea)]'
+                          : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ivory)]',
+                      )}
+                    >
+                      <Piano className="h-4 w-4" /> Øvemodus (vent-modus)
+                    </button>
+                    <button
+                      onClick={() => {
+                        setBandMode((v) => !v)
+                        if (!bandMode) setPracticeOn(false)
+                      }}
+                      aria-pressed={bandMode}
+                      className={cn(
+                        'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                        bandMode
+                          ? 'border-[var(--color-sea)] bg-[var(--color-sea)]/15 text-[var(--color-sea)]'
+                          : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ivory)]',
+                      )}
+                    >
+                      <Users className="h-4 w-4" /> Band-modus
+                    </button>
+                    {bandMode && (
+                      <button
+                        onClick={() => setBackingHand((h) => (h === 'L' ? 'R' : 'L'))}
+                        className="rounded-full border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] hover:text-[var(--color-ivory)]"
+                      >
+                        App spiller: {backingHand === 'L' ? 'venstre' : 'høyre'} hånd
+                      </button>
+                    )}
+                  </div>
+
+                  {midiSupported() ? (
+                    midi ? (
+                      <span className="flex items-center gap-1.5 text-sm text-[var(--color-sea)]">
+                        <Plug className="h-4 w-4" /> {midi.deviceNames[0] ?? 'MIDI tilkoblet'}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={onConnectMidi}
+                        className="flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-3.5 py-2 text-sm text-[var(--color-muted)] hover:text-[var(--color-ivory)]"
+                      >
+                        <Plug className="h-4 w-4" /> Koble til MIDI-keyboard
+                      </button>
+                    )
+                  ) : (
+                    <span className="text-xs text-[var(--color-muted)]">
+                      MIDI krever Chrome/Edge — eller klikk tangentene
+                    </span>
+                  )}
+                </div>
+
+                {practiceOn && (
+                  <p className="mt-3 text-sm text-[var(--color-muted)]">
+                    Spill de <span className="text-[var(--color-amber)]">markerte</span> tangentene i rekkefølge
+                    {waitMode.total > 0 && (
+                      <>
+                        {' — '}
+                        <span className="font-display text-[var(--color-ivory)]">
+                          trinn {waitMode.step + 1} / {waitMode.total}
+                        </span>
+                      </>
+                    )}
+                    . Grønt = riktig, rødt = bom. Bruk MIDI eller klikk.
+                  </p>
+                )}
+                {midiError && <p className="mt-2 text-xs text-[var(--color-blight,#C7534E)]">{midiError}</p>}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </main>
   )
