@@ -1,22 +1,24 @@
-import { Dumbbell } from 'lucide-react'
+import { Suspense } from 'react'
 import { AppShell } from '@/components/AppShell'
+import { OveView } from './OveView'
 
-// PLACEHOLDER — W2 replaces this file's content with the actual Øv-modus
-// (library browsing + practice view). The wrapping pattern below (AppShell
-// + your own <main>) is the contract every mode route follows; see
-// AppShell.tsx for the full write-up.
+// Øv-modus (W2) — the focused library workspace: search + progressively
+// disclosed filters, sort, and "Mine lister" (favorites + practice lists)
+// as a top-level tab instead of always-open filter rows. See OveView.tsx
+// for the implementation and AppShell.tsx for the wrapping contract every
+// mode route follows.
+//
+// AppShell is mounted here (outside the Suspense boundary) so the topbar
+// renders immediately; only OveView — which reads `useSearchParams` —
+// needs to suspend.
 export default function OvePage() {
   return (
     <AppShell mode="ove">
-      <main className="mx-auto flex max-w-3xl flex-col items-center gap-4 px-4 py-20 text-center sm:py-28">
-        <span className="grid h-16 w-16 place-items-center rounded-2xl bg-[var(--color-amber)]/12 text-[var(--color-amber)]">
-          <Dumbbell className="h-8 w-8" strokeWidth={1.75} />
-        </span>
-        <h1 className="font-display text-3xl text-[var(--color-ivory)] sm:text-4xl">Øv-modus kommer her</h1>
-        <p className="max-w-md text-[var(--color-muted)]">
-          Biblioteket og det opplyste klaviaturet flytter inn i denne modusen.
-        </p>
-      </main>
+      <Suspense
+        fallback={<main className="mx-auto max-w-5xl px-4 py-8 sm:py-12 text-[var(--color-muted)]">Laster …</main>}
+      >
+        <OveView />
+      </Suspense>
     </AppShell>
   )
 }
