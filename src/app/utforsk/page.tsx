@@ -1,12 +1,7 @@
-import { Suspense } from 'react'
-import { ExploreView } from './ExploreView'
+import { redirect } from 'next/navigation'
 
+// /utforsk was folded into /ove (W2 — the "Øv"-modus library workspace).
+// Kept as a redirect for old links/bookmarks rather than a 404.
 export default function UtforskPage() {
-  return (
-    <Suspense
-      fallback={<main className="mx-auto max-w-5xl px-4 py-8 sm:py-12 text-[var(--color-muted)]">Laster …</main>}
-    >
-      <ExploreView />
-    </Suspense>
-  )
+  redirect('/ove')
 }
