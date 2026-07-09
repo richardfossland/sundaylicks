@@ -14,6 +14,7 @@ import { computeCourseProgress } from '@/app/kurs/course-progress'
 import { MODES, type ModeId } from '@/lib/modes'
 import { AppShell } from '@/components/AppShell'
 import { ModeCard } from '@/components/ModeCard'
+import { DailyCard } from '@/components/DailyCard'
 import { cn } from '@/lib/cn'
 
 const SEEN_INTRO_KEY = 'sundaylicks_seen_intro'
@@ -25,7 +26,7 @@ const SEEN_INTRO_KEY = 'sundaylicks_seen_intro'
  */
 export default function LauncherPage() {
   const [licks, setLicks] = useState<Lick[]>(FALLBACK_LICKS)
-  const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {} })
+  const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {}, lastPracticed: {} })
   const [showIntro, setShowIntro] = useState(false)
   const [mounted, setMounted] = useState(false)
 
@@ -45,8 +46,13 @@ export default function LauncherPage() {
     } catch {
       /* storage blocked — just skip the banner */
     }
+    // Re-read progress when returning to the tab (e.g. after practicing a lick),
+    // so Dagens økt checkmarks + streak reflect what just happened.
+    const onFocus = () => setProgress(getProgress())
+    window.addEventListener('focus', onFocus)
     return () => {
       alive = false
+      window.removeEventListener('focus', onFocus)
     }
   }, [loadSession])
 
@@ -102,6 +108,8 @@ export default function LauncherPage() {
             Velg en modus for å komme i gang. Du kan alltid bytte fra menyen øverst.
           </p>
         </header>
+
+        <DailyCard licks={licks} progress={progress} />
 
         {hasContinueData && (
           <section className="mb-8 sm:mb-10" aria-label="Fortsett der du slapp">

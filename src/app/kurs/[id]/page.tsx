@@ -25,7 +25,7 @@ export default function KursDetailPage() {
   const path = CURATED_PATHS.find((p) => p.id === params.id)
 
   const [licks, setLicks] = useState<Lick[]>(FALLBACK_LICKS)
-  const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {} })
+  const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {}, lastPracticed: {} })
 
   useEffect(() => {
     let alive = true
