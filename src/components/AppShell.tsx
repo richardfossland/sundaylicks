@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { BarChart3, MoreHorizontal, Plus } from 'lucide-react'
+import { BarChart3, BookOpen, MoreHorizontal, Plus } from 'lucide-react'
 import { MODES, ACCENT_CLASSES, type ModeId } from '@/lib/modes'
 import { cn } from '@/lib/cn'
 
@@ -166,6 +166,14 @@ function OverflowMenu() {
           role="menu"
           className="animate-fade-in absolute right-0 top-[calc(100%+0.5rem)] z-40 w-48 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] py-1.5 shadow-lg shadow-black/40"
         >
+          <Link
+            role="menuitem"
+            href="/oppslagsverk"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--color-ivory)] transition-colors hover:bg-[var(--color-raised)]"
+          >
+            <BookOpen className="h-4 w-4 text-[var(--color-muted)]" /> Oppslagsverk
+          </Link>
           <Link
             role="menuitem"
             href="/stats"

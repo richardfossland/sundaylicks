@@ -8,6 +8,7 @@ import { KeySelector } from '@/components/KeySelector'
 import { KEY_NAMES } from '@/lib/music'
 import { ACCENT_CLASSES } from '@/lib/modes'
 import { cn } from '@/lib/cn'
+import { Term } from '@/components/glossary/Term'
 import { KrydreTab } from './KrydreTab'
 import { OverTab } from './OverTab'
 
@@ -66,7 +67,8 @@ export function SpillView() {
           Naturlige overganger, og krydder for det du spiller
         </h1>
         <p className="mt-2 max-w-2xl text-[var(--color-muted)]">
-          Velg toneart under — den styrer krydder-forslagene i {keyLabel} og hvor kvintsirkelen starter.
+          Velg <Term id="toneart">toneart</Term> under — den styrer krydder-forslagene i {keyLabel} og
+          hvor <Term id="kvintsirkel">kvintsirkelen</Term> starter.
         </p>
       </header>
 

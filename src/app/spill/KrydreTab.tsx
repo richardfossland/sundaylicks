@@ -10,6 +10,7 @@ import { useSession } from '@/lib/session'
 import { LickCard } from '@/components/LickCard'
 import { SpiceChordPicker, type ChordChoice } from '@/components/SpiceChordPicker'
 import { SpiceGeneratedCard } from '@/components/SpiceGeneratedCard'
+import { Term } from '@/components/glossary/Term'
 import { ChordStrip } from '@/components/ChordStrip'
 import { GENRE_LABEL, GENRE_ORDER } from '@/lib/labels'
 import { KEY_NAMES, chordLabel } from '@/lib/music'
@@ -188,8 +189,9 @@ export function KrydreTab() {
       <section>
         <h2 className="mb-1 font-display text-2xl text-[var(--color-ivory)]">Velg en akkord i {keyLabel}</h2>
         <p className="mb-4 max-w-2xl text-sm text-[var(--color-muted)]">
-          Velg en diatonisk grad, eller sett en egen akkord — under ser du bibliotek-fills og genererte
-          reharm-/voicing-forslag over den.
+          Velg en <Term id="diatonisk">diatonisk</Term> grad, eller sett en egen akkord — under ser du
+          bibliotek-<Term id="fill">fills</Term> og genererte{' '}
+          <Term id="reharmonisering">reharm</Term>-/<Term id="voicing">voicing</Term>-forslag over den.
         </p>
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <SpiceChordPicker diatonic={diatonic} value={chordChoice} onChange={setChordChoice} />
