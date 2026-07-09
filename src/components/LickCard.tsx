@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { Check, ArrowLeftRight } from 'lucide-react'
 import type { Lick } from '@/types/lick'
-import { CATEGORY_LABEL, GENRE_LABEL, DIFFICULTY_LABEL, difficultyDots } from '@/lib/labels'
+import { CATEGORY_LABEL, GENRE_LABEL } from '@/lib/labels'
 import { KEY_NAMES } from '@/lib/music'
 import { FavoriteButton } from './FavoriteButton'
+import { DifficultyBadge } from './DifficultyBadge'
 
 export function LickCard({
   lick,
@@ -58,9 +59,7 @@ export function LickCard({
       )}
 
       <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--color-muted)]">
-        <span className="tracking-widest text-[var(--color-amber)]" title={DIFFICULTY_LABEL[lick.difficulty]}>
-          {difficultyDots(lick.difficulty)}
-        </span>
+        <DifficultyBadge difficulty={lick.difficulty} />
         <span className="inline-flex items-center gap-1">
           {transposed && (
             <ArrowLeftRight

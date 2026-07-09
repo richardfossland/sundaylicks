@@ -5,11 +5,11 @@ import { Check, Heart, ListPlus, Play, Plus } from 'lucide-react'
 import type { TransitionResult } from '@/lib/theory/transitions'
 import type { Lick } from '@/types/lick'
 import { chordLabel } from '@/lib/music'
-import { DIFFICULTY_LABEL, difficultyDots } from '@/lib/labels'
 import { useCollections } from '@/lib/collections'
 import { cn } from '@/lib/cn'
 import { Notation } from '@/components/NotationLazy'
 import { ExportButton } from '@/components/ExportButton'
+import { DifficultyBadge } from '@/components/DifficultyBadge'
 import { generatedToLick } from './adapter'
 
 /** One ranked transition variant — chord path, mini-notation, play/save actions. */
@@ -47,9 +47,7 @@ export function ResultCard({ result, onPlay }: { result: TransitionResult; onPla
     <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="tracking-widest text-[var(--color-amber)]" title={DIFFICULTY_LABEL[result.lick.difficulty]}>
-            {difficultyDots(result.lick.difficulty)}
-          </p>
+          <DifficultyBadge difficulty={result.lick.difficulty} className="mb-0.5" />
           <h3 className="font-display text-lg leading-tight text-[var(--color-ivory)]">{result.label}</h3>
           <p className="text-sm text-[var(--color-muted)]">{chordPath}</p>
         </div>

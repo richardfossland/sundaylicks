@@ -62,6 +62,19 @@ export default function StatsPage() {
         <h1 className="font-display text-4xl text-[var(--color-ivory)]">Din fremgang</h1>
         <p className="mt-2 text-[var(--color-muted)]">Lagret lokalt på denne enheten.</p>
 
+        {stats.practicedCount === 0 && (
+          <div className="mt-6 rounded-2xl border border-[var(--color-amber)]/30 bg-[var(--color-amber)]/8 p-5">
+            <p className="font-display text-lg text-[var(--color-ivory)]">Du har ikke øvd noen licks enda</p>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">Når du øver en lick, dukker fremgangen din opp her.</p>
+            <Link
+              href="/ove"
+              className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[var(--color-amber)] transition-opacity hover:opacity-90"
+            >
+              Gå til biblioteket →
+            </Link>
+          </div>
+        )}
+
         {/* Overall + collections */}
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Stat big label="Øvd" value={`${stats.practicedCount}/${stats.total}`} sub={`${pct}%`} />

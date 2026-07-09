@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Play, Heart, ListPlus, Check, Plus } from 'lucide-react'
 import type { Lick } from '@/types/lick'
 import { useCollections } from '@/lib/collections'
-import { DIFFICULTY_LABEL, difficultyDots } from '@/lib/labels'
 import { cn } from '@/lib/cn'
+import { DifficultyBadge } from './DifficultyBadge'
 
 /**
  * A generated (in-memory, not-yet-in-the-DB) lick — reharm/voicing/progression
@@ -77,9 +77,7 @@ export function SpiceGeneratedCard({
       {lick.description && <p className="line-clamp-2 text-xs leading-relaxed text-[var(--color-muted)]">{lick.description}</p>}
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--color-muted)]">
-        <span className="tracking-widest text-[var(--color-amber)]" title={DIFFICULTY_LABEL[lick.difficulty]}>
-          {difficultyDots(lick.difficulty)}
-        </span>
+        <DifficultyBadge difficulty={lick.difficulty} />
         <span>{lick.default_bpm} BPM</span>
       </div>
 

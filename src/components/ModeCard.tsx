@@ -9,7 +9,7 @@ import { cn } from '@/lib/cn'
  * tagline. See `@/lib/modes` for the data and `AppShell` for the contract
  * the destination route (`/${mode.slug}`) is expected to follow.
  */
-export function ModeCard({ mode }: { mode: ModeDef }) {
+export function ModeCard({ mode, stat }: { mode: ModeDef; stat?: string }) {
   const Icon = mode.icon
   const accent = ACCENT_CLASSES[mode.accent]
 
@@ -30,6 +30,7 @@ export function ModeCard({ mode }: { mode: ModeDef }) {
           {mode.label}
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-[var(--color-muted)]">{mode.tagline}</p>
+        {stat && <p className="mt-1.5 text-xs text-[var(--color-muted)]/80">{stat}</p>}
       </div>
 
       <span

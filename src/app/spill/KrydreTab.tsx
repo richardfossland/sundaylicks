@@ -189,9 +189,8 @@ export function KrydreTab() {
       <section>
         <h2 className="mb-1 font-display text-2xl text-[var(--color-ivory)]">Velg en akkord i {keyLabel}</h2>
         <p className="mb-4 max-w-2xl text-sm text-[var(--color-muted)]">
-          Velg en <Term id="diatonisk">diatonisk</Term> grad, eller sett en egen akkord — under ser du
-          bibliotek-<Term id="fill">fills</Term> og genererte{' '}
-          <Term id="reharmonisering">reharm</Term>-/<Term id="voicing">voicing</Term>-forslag over den.
+          Velg en akkord fra sangen din — under viser vi ferdige <Term id="fill">fills</Term> fra biblioteket
+          og genererte forslag du kan spille over den.
         </p>
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <SpiceChordPicker diatonic={diatonic} value={chordChoice} onChange={setChordChoice} />
@@ -219,7 +218,8 @@ export function KrydreTab() {
         )}
 
         <div className="mb-6">
-          <h3 className="mb-2 text-sm font-medium uppercase tracking-wide text-[var(--color-muted)]">Reharm-forslag</h3>
+          <h3 className="text-sm font-medium uppercase tracking-wide text-[var(--color-muted)]">Reharm-forslag</h3>
+          <p className="mb-2 text-xs text-[var(--color-muted)]">Samme sted i sangen, rikere akkorder.</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {reharmLicks.map(({ badge, lick: l }) => (
               <SpiceGeneratedCard key={l.id} lick={l} badge={badge} active={preview?.id === l.id} onPlay={() => play(l)} />
@@ -228,7 +228,8 @@ export function KrydreTab() {
         </div>
 
         <div>
-          <h3 className="mb-2 text-sm font-medium uppercase tracking-wide text-[var(--color-muted)]">Voicinger</h3>
+          <h3 className="text-sm font-medium uppercase tracking-wide text-[var(--color-muted)]">Voicinger</h3>
+          <p className="mb-2 text-xs text-[var(--color-muted)]">Samme akkord, ulike måter å legge den på.</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {voicingLicks.map(({ badge, lick: l }) => (
               <SpiceGeneratedCard key={l.id} lick={l} badge={badge} active={preview?.id === l.id} onPlay={() => play(l)} />

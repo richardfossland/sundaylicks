@@ -25,7 +25,7 @@ import { getEngine } from '@/lib/playback'
 import { installAudioUnlock } from '@/lib/audio-unlock'
 import { usePlayer } from '@/lib/store'
 import { KEY_NAMES, chordPitchClasses } from '@/lib/music'
-import { CATEGORY_LABEL, GENRE_LABEL, DIFFICULTY_LABEL, difficultyDots } from '@/lib/labels'
+import { CATEGORY_LABEL, GENRE_LABEL } from '@/lib/labels'
 import { parseShare, buildShare } from '@/lib/share'
 import { recordPractice } from '@/lib/progress'
 import { useCollections } from '@/lib/collections'
@@ -38,6 +38,7 @@ import { PianoRoll } from './PianoRoll'
 import { Notation } from './NotationLazy'
 import { ChordStrip } from './ChordStrip'
 import { TransportBar } from './TransportBar'
+import { DifficultyBadge } from './DifficultyBadge'
 import { FavoriteButton } from './FavoriteButton'
 import { AddToListButton } from './AddToListButton'
 import { ExportButton } from './ExportButton'
@@ -387,9 +388,7 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
           <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-raised)] px-2.5 py-0.5">
             {CATEGORY_LABEL[lick.category]}
           </span>
-          <span className="tracking-widest text-[var(--color-amber)]" title={DIFFICULTY_LABEL[lick.difficulty]}>
-            {difficultyDots(lick.difficulty)}
-          </span>
+          <DifficultyBadge difficulty={lick.difficulty} />
           <span>
             Original: {KEY_NAMES[lick.original_key]}-dur · {lick.default_bpm} BPM
           </span>
@@ -456,6 +455,26 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
           hand={hand}
           onHand={setHand}
         />
+
+        {/* Øvemodus (vent-modus): surfaced here as a first-class chip so it's
+            discoverable without opening "Flere verktøy" — same practiceOn state
+            as the detailed panel below. */}
+        <button
+          onClick={() => {
+            setPracticeOn((v) => !v)
+            if (!practiceOn) setBandMode(false)
+          }}
+          aria-pressed={practiceOn}
+          title="Øv med vent-modus — appen venter på at du spiller riktig tangent"
+          className={cn(
+            'flex w-fit items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+            practiceOn
+              ? 'border-[var(--color-sea)] bg-[var(--color-sea)]/15 text-[var(--color-sea)]'
+              : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ivory)]',
+          )}
+        >
+          <Piano className="h-4 w-4" /> Øvemodus
+        </button>
 
         {/* Avansert: progressiv avsløring — akkordtoner, eksport/del, A-B-loop,
             øve-/vent-modus, band-modus og MIDI flytter bak denne bryteren. */}

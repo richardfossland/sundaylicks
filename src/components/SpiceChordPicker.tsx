@@ -13,10 +13,32 @@ export interface ChordChoice {
 
 // A small, readable palette — not every quality voicings.ts knows about, just
 // the ones that make sense to hand-pick a chord/scale-degree over.
-const QUALITY_OPTIONS = ['maj7', 'm7', '7', 'm7b5', 'dim7', 'm', '', 'sus4', '9', 'm9', 'maj9'] as const
+export const QUALITY_OPTIONS = ['maj7', 'm7', '7', 'm7b5', 'dim7', 'm', '', 'sus4', '9', 'm9', 'maj9'] as const
 
-function qualityDisplay(q: string): string {
-  return q === '' ? 'dur' : q
+export type QualityOption = (typeof QUALITY_OPTIONS)[number]
+
+// Plain-Norwegian names for the chord qualities — the raw jazz shorthand
+// ("m7b5") means nothing to a beginner, so the custom-chord select spells it
+// out. Kept exhaustive over QUALITY_OPTIONS (a colocated test guards this).
+export const QUALITY_LABEL: Record<QualityOption, string> = {
+  maj7: 'stor septim',
+  m7: 'mollseptim',
+  '7': 'dominant',
+  m7b5: 'halvforminsket',
+  dim7: 'forminsket',
+  m: 'moll',
+  '': 'dur',
+  sus4: 'sus4',
+  '9': 'dominant med none',
+  m9: 'moll med none',
+  maj9: 'stor septim med none',
+}
+
+/** Option text for the quality select: "maj7 — stor septim", or just the
+ * friendly word when the symbol would be empty/identical ("dur", "sus4"). */
+export function qualityOptionLabel(q: QualityOption): string {
+  const label = QUALITY_LABEL[q]
+  return q && q !== label ? `${q} — ${label}` : label
 }
 
 /**
@@ -55,7 +77,7 @@ export function SpiceChordPicker({
                   : 'border-[var(--color-border)] bg-[var(--color-raised)] text-[var(--color-muted)] hover:text-[var(--color-ivory)]',
               )}
             >
-              {d.roman} <span className="opacity-70">{chordLabel(d.root, d.quality)}</span>
+              {chordLabel(d.root, d.quality)} <span className="opacity-70">{d.roman}</span>
             </button>
           )
         })}
@@ -101,7 +123,7 @@ export function SpiceChordPicker({
           >
             {QUALITY_OPTIONS.map((q) => (
               <option key={q} value={q}>
-                {qualityDisplay(q)}
+                {qualityOptionLabel(q)}
               </option>
             ))}
           </select>
