@@ -18,7 +18,7 @@ const SEEN_KURS_INTRO_KEY = 'sundaylicks_seen_kurs_intro'
  * dashboard's course grid used, unchanged here.
  */
 export default function KursPage() {
-  const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {} })
+  const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {}, lastPracticed: {} })
   const [showIntro, setShowIntro] = useState(false)
 
   useEffect(() => {

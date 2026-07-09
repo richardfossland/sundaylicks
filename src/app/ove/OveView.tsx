@@ -79,7 +79,7 @@ export function OveView() {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<SortKey>('default')
   const [filterOpen, setFilterOpen] = useState(false)
-  const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {} })
+  const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {}, lastPracticed: {} })
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
 

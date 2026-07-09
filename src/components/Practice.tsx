@@ -27,7 +27,8 @@ import { usePlayer } from '@/lib/store'
 import { KEY_NAMES, chordPitchClasses } from '@/lib/music'
 import { CATEGORY_LABEL, GENRE_LABEL } from '@/lib/labels'
 import { parseShare, buildShare } from '@/lib/share'
-import { recordPractice } from '@/lib/progress'
+import { recordPractice, todayKey } from '@/lib/progress'
+import { getDailySessionSlugs } from '@/lib/daily'
 import { useCollections } from '@/lib/collections'
 import { CURATED_PATHS } from '@/data/curated-paths'
 import { useWaitMode } from '@/lib/useWaitMode'
@@ -79,7 +80,7 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
   const [loopB, setLoopB] = useState(8)
   const [midi, setMidi] = useState<MidiConnection | null>(null)
   const [midiError, setMidiError] = useState<string | null>(null)
-  const [listCtx, setListCtx] = useState<{ kind: 'list' | 'path'; id: string; index: number } | null>(null)
+  const [listCtx, setListCtx] = useState<{ kind: 'list' | 'path' | 'daily'; id: string; index: number } | null>(null)
   const [toolsOpen, setToolsOpen] = useState(false)
 
   const router = useRouter()
@@ -117,9 +118,16 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
       const share = parseShare(window.location.search)
       const listId = q.get('list')
       const pathId = q.get('path')
+      const daily = q.get('daily') === '1'
       const index = Number(q.get('i') ?? 0) || 0
       setListCtx(
-        listId ? { kind: 'list', id: listId, index } : pathId ? { kind: 'path', id: pathId, index } : null,
+        daily
+          ? { kind: 'daily', id: '1', index }
+          : listId
+            ? { kind: 'list', id: listId, index }
+            : pathId
+              ? { kind: 'path', id: pathId, index }
+              : null,
       )
       setLick(l)
       setTargetKey(share.key ?? l.original_key)
@@ -240,9 +248,11 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
   // browsing, carried over via the same `?path=`/`?list=` params the
   // library/course views already use to build `/lick/[slug]` links.
   const backHref = listCtx
-    ? listCtx.kind === 'path'
-      ? `/kurs?path=${listCtx.id}`
-      : `/ove?list=${listCtx.id}`
+    ? listCtx.kind === 'daily'
+      ? '/'
+      : listCtx.kind === 'path'
+        ? `/kurs?path=${listCtx.id}`
+        : `/ove?list=${listCtx.id}`
     : '/ove'
   const goBack = (e: React.MouseEvent) => {
     if (typeof document === 'undefined' || !document.referrer) return
@@ -317,9 +327,11 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
   }
 
   const navList = listCtx
-    ? listCtx.kind === 'path'
-      ? (CURATED_PATHS.find((p) => p.id === listCtx.id) ?? null)
-      : (lists.find((l) => l.id === listCtx.id) ?? null)
+    ? listCtx.kind === 'daily'
+      ? { name: 'Dagens økt', slugs: getDailySessionSlugs(todayKey()) }
+      : listCtx.kind === 'path'
+        ? (CURATED_PATHS.find((p) => p.id === listCtx.id) ?? null)
+        : (lists.find((l) => l.id === listCtx.id) ?? null)
     : null
   const goTo = (idx: number) => {
     if (!navList || !listCtx) return

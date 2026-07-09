@@ -2,17 +2,19 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Heart, ListMusic } from 'lucide-react'
+import { ArrowLeft, Heart, ListMusic, Flame } from 'lucide-react'
 import type { Lick, Genre, Difficulty } from '@/types/lick'
 import { FALLBACK_LICKS, fetchLicks } from '@/lib/licks'
-import { getProgress, type Progress } from '@/lib/progress'
+import { getProgress, todayKey, type Progress } from '@/lib/progress'
+import { computeStreak, loadDaily } from '@/lib/daily'
 import { useCollections } from '@/lib/collections'
 import { GENRE_LABEL, GENRE_ORDER, DIFFICULTY_LABEL } from '@/lib/labels'
 import { AppShell } from '@/components/AppShell'
 
 export default function StatsPage() {
   const [licks, setLicks] = useState<Lick[]>(FALLBACK_LICKS)
-  const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {} })
+  const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {}, lastPracticed: {} })
+  const [streak, setStreak] = useState(0)
   const favorites = useCollections((s) => s.favorites)
   const lists = useCollections((s) => s.lists)
   const load = useCollections((s) => s.load)
@@ -21,6 +23,7 @@ export default function StatsPage() {
     let alive = true
     fetchLicks().then((r) => alive && setLicks(r))
     setProgress(getProgress())
+    setStreak(computeStreak(loadDaily().completedDates, todayKey()))
     load()
     return () => {
       alive = false
@@ -76,8 +79,9 @@ export default function StatsPage() {
         )}
 
         {/* Overall + collections */}
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Stat big label="Øvd" value={`${stats.practicedCount}/${stats.total}`} sub={`${pct}%`} />
+          <Stat label="Streak" value={`${streak}`} sub={streak === 1 ? 'dag' : 'dager'} icon={<Flame className="h-4 w-4" />} />
           <Stat label="Favoritter" value={String(favorites.length)} icon={<Heart className="h-4 w-4" />} />
           <Stat label="Lister" value={String(lists.length)} icon={<ListMusic className="h-4 w-4" />} />
         </div>
