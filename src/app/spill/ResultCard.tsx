@@ -8,7 +8,7 @@ import { chordLabel } from '@/lib/music'
 import { DIFFICULTY_LABEL, difficultyDots } from '@/lib/labels'
 import { useCollections } from '@/lib/collections'
 import { cn } from '@/lib/cn'
-import { Notation } from '@/components/Notation'
+import { Notation } from '@/components/NotationLazy'
 import { ExportButton } from '@/components/ExportButton'
 import { generatedToLick } from './adapter'
 

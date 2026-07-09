@@ -41,9 +41,12 @@ function renderSvg(lick: Lick, targetKey: number): string {
   }
 }
 
-export function printLickSheet(lick: Lick, targetKey: number, bpm: number) {
+// `win` lets the caller pre-open the print window synchronously inside a click
+// handler (popup-blocker-safe) before this module is dynamically imported; when
+// omitted we open it ourselves, preserving the original call signature.
+export function printLickSheet(lick: Lick, targetKey: number, bpm: number, win?: Window | null) {
   const svg = renderSvg(lick, targetKey)
-  const w = window.open('', '_blank')
+  const w = win ?? window.open('', '_blank')
   if (!w) return
   const title = lick.name
   const meta = `${KEY_NAMES[targetKey]}-dur · ${bpm} BPM`
