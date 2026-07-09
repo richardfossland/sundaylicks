@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 import { Download, FileMusic, Printer } from 'lucide-react'
 import type { Lick } from '@/types/lick'
 import { downloadMidi } from '@/lib/midi-export'
-import { printLickSheet } from '@/lib/pdf-export'
 
 export function ExportButton({ lick, targetKey, bpm }: { lick: Lick; targetKey: number; bpm: number }) {
   const [open, setOpen] = useState(false)
@@ -42,9 +41,17 @@ export function ExportButton({ lick, targetKey, bpm }: { lick: Lick; targetKey: 
           </button>
           <button
             className={item}
-            onClick={() => {
-              printLickSheet(lick, targetKey, bpm)
+            onClick={async () => {
               setOpen(false)
+              // Open the print window synchronously inside the click gesture so
+              // Safari's popup blocker doesn't kill it, THEN load the heavy
+              // pdf-export module (which drags in VexFlow, ~968 KB) on demand and
+              // write into the already-open window. Keeps VexFlow out of the
+              // eager bundle without breaking print on iOS.
+              const win = window.open('', '_blank')
+              if (!win) return
+              const { printLickSheet } = await import('@/lib/pdf-export')
+              printLickSheet(lick, targetKey, bpm, win)
             }}
           >
             <Printer className="h-4 w-4 text-[var(--color-amber)]" /> Skriv ut noter (PDF)
