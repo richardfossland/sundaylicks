@@ -81,6 +81,28 @@ export function TransportBar(p: Props) {
           <TrendingUp className="h-4 w-4" /> Trapp opp
         </button>
 
+        <div className="flex min-w-[220px] flex-1 items-center gap-3">
+          <span className="w-16 shrink-0 text-sm text-[var(--color-muted)]">Tempo</span>
+          <input
+            type="range"
+            min={40}
+            max={180}
+            step={1}
+            value={p.bpm}
+            onChange={(e) => p.onBpm(Number(e.target.value))}
+            className="h-2 flex-1 cursor-pointer accent-[var(--color-amber)]"
+            aria-label="Tempo (BPM)"
+          />
+          <span className="w-20 shrink-0 text-right font-display text-lg tabular-nums">
+            {p.bpm}
+            <span className="ml-1 text-xs text-[var(--color-muted)]">BPM</span>
+          </span>
+        </div>
+      </div>
+
+      {/* Row 2: rhythm feel (metronome / count-in / swing) */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="w-16 shrink-0 text-sm text-[var(--color-muted)]">Rytme</span>
         <button
           onClick={p.onMetronomeToggle}
           aria-pressed={p.metronome}
@@ -122,27 +144,9 @@ export function TransportBar(p: Props) {
         >
           <Waves className="h-4 w-4" /> Swing
         </button>
-
-        <div className="flex min-w-[220px] flex-1 items-center gap-3">
-          <span className="w-16 shrink-0 text-sm text-[var(--color-muted)]">Tempo</span>
-          <input
-            type="range"
-            min={40}
-            max={180}
-            step={1}
-            value={p.bpm}
-            onChange={(e) => p.onBpm(Number(e.target.value))}
-            className="h-2 flex-1 cursor-pointer accent-[var(--color-amber)]"
-            aria-label="Tempo (BPM)"
-          />
-          <span className="w-20 shrink-0 text-right font-display text-lg tabular-nums">
-            {p.bpm}
-            <span className="ml-1 text-xs text-[var(--color-muted)]">BPM</span>
-          </span>
-        </div>
       </div>
 
-      {/* Row 2: hand select */}
+      {/* Row 3: hand select */}
       <div className="flex items-center gap-2">
         <span className="w-16 shrink-0 text-sm text-[var(--color-muted)]">Hånd</span>
         <div className="flex gap-2">
@@ -168,7 +172,7 @@ export function TransportBar(p: Props) {
         </div>
       </div>
 
-      {/* Row 3: key grid */}
+      {/* Row 4: key grid */}
       <div className="flex items-start gap-2">
         <span className="mt-1.5 w-16 shrink-0 text-sm text-[var(--color-muted)]">Toneart</span>
         <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-12">

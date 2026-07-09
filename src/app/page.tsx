@@ -10,7 +10,8 @@ import { useSession } from '@/lib/session'
 import { KEY_NAMES } from '@/lib/music'
 import { CATEGORY_LABEL, GENRE_LABEL } from '@/lib/labels'
 import { CURATED_PATHS } from '@/data/curated-paths'
-import { MODES } from '@/lib/modes'
+import { computeCourseProgress } from '@/app/kurs/course-progress'
+import { MODES, type ModeId } from '@/lib/modes'
 import { AppShell } from '@/components/AppShell'
 import { ModeCard } from '@/components/ModeCard'
 import { cn } from '@/lib/cn'
@@ -26,6 +27,7 @@ export default function LauncherPage() {
   const [licks, setLicks] = useState<Lick[]>(FALLBACK_LICKS)
   const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {} })
   const [showIntro, setShowIntro] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   const sessionKey = useSession((s) => s.key)
   const loadSession = useSession((s) => s.load)
@@ -37,6 +39,7 @@ export default function LauncherPage() {
     })
     setProgress(getProgress())
     loadSession()
+    setMounted(true)
     try {
       if (!localStorage.getItem(SEEN_INTRO_KEY)) setShowIntro(true)
     } catch {
@@ -69,6 +72,21 @@ export default function LauncherPage() {
     }
     return null
   }, [progress.practiced])
+
+  // Per-mode progress line, computed only after mount so the server render and
+  // the first client render match (starts empty → no hydration mismatch).
+  const modeStats = useMemo<Partial<Record<ModeId, string>>>(() => {
+    if (!mounted) return {}
+    const practicedSet = new Set(progress.practiced)
+    const practicedCount = licks.filter((l) => practicedSet.has(l.slug)).length
+    const coursesDone = CURATED_PATHS.filter(
+      (p) => computeCourseProgress(p, progress.practiced).status === 'done',
+    ).length
+    return {
+      ove: `${practicedCount} av ${licks.length} licks øvd`,
+      kurs: `${coursesDone} av ${CURATED_PATHS.length} kurs fullført`,
+    }
+  }, [mounted, licks, progress.practiced])
 
   const keyLabel = `${KEY_NAMES[sessionKey.root]}${sessionKey.mode === 'minor' ? '-moll' : '-dur'}`
   const hasContinueData = Boolean(lastLick || inProgressPath)
@@ -123,7 +141,7 @@ export default function LauncherPage() {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {MODES.map((m) => (
-            <ModeCard key={m.id} mode={m} />
+            <ModeCard key={m.id} mode={m} stat={modeStats[m.id]} />
           ))}
         </div>
       </main>
@@ -138,10 +156,7 @@ function IntroBanner({ onDismiss }: { onDismiss: () => void }) {
       <div className="min-w-0 flex-1">
         <p className="font-display text-base text-[var(--color-ivory)]">Tre måter å bruke SundayLicks på</p>
         <p className="mt-1 text-sm leading-relaxed text-[var(--color-muted)]">
-          <strong className="text-[var(--color-ivory)]">Øv</strong> tar deg til biblioteket og et opplyst
-          klaviatur. <strong className="text-[var(--color-ivory)]">Kurs</strong> gir deg et strukturert løp å følge.{' '}
-          <strong className="text-[var(--color-ivory)]">Spill smartere</strong> hjelper deg mellom tonearter og med
-          å krydre det du allerede spiller.
+          Velg et kort under for å starte — alt du gjør lagres lokalt på denne enheten.
         </p>
       </div>
       <button

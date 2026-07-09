@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { NOTE_NAMES } from '@/lib/music'
 import type { Key } from '@/lib/theory/keys'
 import { cn } from '@/lib/cn'
+import { GlossaryText } from '@/components/glossary/GlossaryText'
 import {
   RING,
   angleForIndex,
@@ -165,7 +166,7 @@ export function CircleOfFifths({ from, to, onSelectFrom, onSelectTo, showTarget 
         {showTarget && (
           <>
             <p className="text-sm text-[var(--color-ivory)]">{describeDistance(from, to)}</p>
-            <p className="max-w-xs text-xs text-[var(--color-muted)]">{describePivots(from, to)}</p>
+            <GlossaryText text={describePivots(from, to)} className="max-w-xs text-xs text-[var(--color-muted)]" />
           </>
         )}
       </div>
