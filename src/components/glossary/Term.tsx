@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import Link from 'next/link'
 import { GLOSSARY_BY_ID } from '@/data/glossary'
+import { DEMO_BY_TERM_ID } from '@/data/glossary-demos'
 
 /** Kun én popover åpen om gangen — alle åpne Terms lukker seg når en annen åpner. */
 const OPEN_EVENT = 'sl-term-popover-open'
@@ -25,6 +26,7 @@ export function Term({ id, children }: { id: string; children: React.ReactNode }
   const [pos, setPos] = useState<{ top: number; left: number; above: boolean } | null>(null)
   const rootRef = useRef<HTMLSpanElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const openScrollY = useRef(0)
   const instanceId = useId()
 
   const place = useCallback(() => {
@@ -42,29 +44,35 @@ export function Term({ id, children }: { id: string; children: React.ReactNode }
   useEffect(() => {
     if (!open) return
     place()
+    openScrollY.current = window.scrollY
     function onPointerDown(e: PointerEvent) {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
     }
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') setOpen(false)
     }
-    // Fixed panel løsner fra inline-triggeren ved scroll — lukk i stedet for å flyte.
+    // Fixed panel løsner fra inline-triggeren ved scroll — lukk. Men bare ved
+    // reell scrolling (>32px): på mobil trigger et tap ofte en bitteliten
+    // scroll-jitter som ellers ville lukket popoveren idet den åpnet seg.
     function onScroll() {
-      setOpen(false)
+      if (Math.abs(window.scrollY - openScrollY.current) > 32) setOpen(false)
     }
     function onOtherOpen(e: Event) {
       if ((e as CustomEvent<string>).detail !== instanceId) setOpen(false)
     }
+    function onResize() {
+      setOpen(false)
+    }
     document.addEventListener('pointerdown', onPointerDown)
     document.addEventListener('keydown', onKeyDown)
     window.addEventListener('scroll', onScroll, true)
-    window.addEventListener('resize', onScroll)
+    window.addEventListener('resize', onResize)
     document.addEventListener(OPEN_EVENT, onOtherOpen)
     return () => {
       document.removeEventListener('pointerdown', onPointerDown)
       document.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('scroll', onScroll, true)
-      window.removeEventListener('resize', onScroll)
+      window.removeEventListener('resize', onResize)
       document.removeEventListener(OPEN_EVENT, onOtherOpen)
     }
   }, [open, place, instanceId])
@@ -111,7 +119,7 @@ export function Term({ id, children }: { id: string; children: React.ReactNode }
             className="mt-2.5 block text-xs font-medium text-[var(--color-amber)] transition-colors hover:text-[var(--color-ivory)]"
             onClick={() => setOpen(false)}
           >
-            Les mer i oppslagsverket →
+            {DEMO_BY_TERM_ID.has(entry.id) ? 'Les mer — og hør et eksempel →' : 'Les mer i oppslagsverket →'}
           </Link>
         </span>
       )}
