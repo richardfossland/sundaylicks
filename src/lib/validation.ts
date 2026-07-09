@@ -90,3 +90,16 @@ export const submissionSchema = lickContent.superRefine(refineWithinBeats)
 
 export type ValidatedSeedLick = z.infer<typeof seedLickSchema>
 export type LickSubmission = z.infer<typeof lickContent>
+
+// Oppslagsverk-oppføring (data/glossary.ts). `short` er bundet fordi den
+// rendres i en liten popover; `body` er romslig men bundet (render-kost).
+export const glossaryTermSchema = z.object({
+  id: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'id må være kebab-case'),
+  term: z.string().min(1).max(60),
+  aliases: z.array(z.string().min(1).max(60)).max(16).optional(),
+  category: z.enum(['harmoni', 'rytme', 'sjanger', 'teknikk', 'notasjon', 'app']),
+  short: z.string().min(1).max(240),
+  body: z.string().min(1).max(3000),
+  seeAlso: z.array(z.string().min(1)).max(8).optional(),
+  noAutoLink: z.boolean().optional(),
+})

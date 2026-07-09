@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Check, GraduationCap, Play } from 'lucide-react'
+import { GlossaryText } from '@/components/glossary/GlossaryText'
 import { cn } from '@/lib/cn'
 import type { CourseProgress } from './course-progress'
 import { resumeStep } from './course-progress'
@@ -36,7 +37,10 @@ export function CourseCard({ progress }: { progress: CourseProgress }) {
         </h3>
       </Link>
 
-      <p className="text-sm leading-relaxed text-[var(--color-muted)]">{path.description}</p>
+      <GlossaryText
+        text={path.description}
+        className="text-sm leading-relaxed text-[var(--color-muted)]"
+      />
 
       <div className="mt-auto">
         <div className="mb-1 flex items-center justify-between text-xs text-[var(--color-muted)]">

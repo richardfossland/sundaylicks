@@ -41,6 +41,7 @@ import { TransportBar } from './TransportBar'
 import { FavoriteButton } from './FavoriteButton'
 import { AddToListButton } from './AddToListButton'
 import { ExportButton } from './ExportButton'
+import { GlossaryText } from './glossary/GlossaryText'
 
 type View = 'roll' | 'notation'
 
@@ -395,7 +396,7 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
         </div>
         <h1 className="mt-2 font-display text-3xl text-[var(--color-ivory)] sm:text-4xl">{lick.name}</h1>
         {lick.description && (
-          <p className="mt-2 max-w-2xl text-[var(--color-muted)]">{lick.description}</p>
+          <GlossaryText text={lick.description} className="mt-2 max-w-2xl text-[var(--color-muted)]" />
         )}
       </header>
 

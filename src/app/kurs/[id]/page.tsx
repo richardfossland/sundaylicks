@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { ArrowLeft, Check, GraduationCap } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
+import { GlossaryText } from '@/components/glossary/GlossaryText'
 import { CURATED_PATHS } from '@/data/curated-paths'
 import { FALLBACK_LICKS, fetchLicks } from '@/lib/licks'
 import { getProgress, type Progress } from '@/lib/progress'
@@ -72,7 +73,10 @@ export default function KursDetailPage() {
             <GraduationCap className="h-3.5 w-3.5" /> Kurs
           </div>
           <h1 className="font-display text-3xl text-[var(--color-ivory)] sm:text-4xl">{path.name}</h1>
-          <p className="mt-3 max-w-xl text-[var(--color-muted)] leading-relaxed">{path.description}</p>
+          <GlossaryText
+            text={path.description}
+            className="mt-3 max-w-xl text-[var(--color-muted)] leading-relaxed"
+          />
 
           <div className="mt-5 max-w-sm">
             <div className="mb-1 flex items-center justify-between text-xs text-[var(--color-muted)]">
