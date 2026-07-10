@@ -10,6 +10,7 @@ import {
   Trash2,
   ListMusic,
   Search,
+  Shuffle,
   SlidersHorizontal,
   ChevronDown,
   X,
@@ -161,6 +162,12 @@ export function OveView() {
         <p className="mt-2 max-w-xl text-[var(--color-muted)]">
           Bla i biblioteket, søk og filtrer — eller hopp rett til favorittene og øvingslistene dine.
         </p>
+        <Link
+          href="/bla"
+          className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--color-amber)] px-4 py-2 text-sm font-semibold text-[var(--color-ink-on-amber)] transition-opacity hover:opacity-90"
+        >
+          <Shuffle className="h-4 w-4" /> Bla gjennom licks
+        </Link>
       </header>
 
       {/* Top-level lens: the whole library vs. what you've collected */}
