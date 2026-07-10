@@ -34,6 +34,7 @@ import { CURATED_PATHS } from '@/data/curated-paths'
 import { useWaitMode } from '@/lib/useWaitMode'
 import { connectMidi, midiSupported, type MidiConnection } from '@/lib/midi'
 import { cn } from '@/lib/cn'
+import { useSession } from '@/lib/session'
 import { Keyboard } from './Keyboard'
 import { PianoRoll } from './PianoRoll'
 import { Notation } from './NotationLazy'
@@ -68,6 +69,9 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
   const [hand, setHand] = useState<HandFilter>('both')
   const [loop, setLoop] = useState(true)
   const [view, setView] = useState<View>('roll')
+  // Global lyd-preferanse (AppShell speiler den inn i motoren — se AppShell.tsx)
+  const instrument = useSession((s) => s.instrument)
+  const setInstrument = useSession((s) => s.setInstrument)
   const [showOverlay, setShowOverlay] = useState(false)
   const [copied, setCopied] = useState(false)
   const [ramp, setRamp] = useState(false)
@@ -466,6 +470,8 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
           onKey={setTargetKey}
           hand={hand}
           onHand={setHand}
+          instrument={instrument}
+          onInstrument={setInstrument}
         />
 
         {/* Øvemodus (vent-modus): surfaced here as a first-class chip so it's

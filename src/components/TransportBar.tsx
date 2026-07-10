@@ -3,6 +3,7 @@
 import { Play, Square, Repeat, Loader2, TrendingUp, Timer, Hash, Waves } from 'lucide-react'
 import type { HandFilter } from '@/types/lick'
 import { KEY_NAMES } from '@/lib/music'
+import { INSTRUMENT_LABEL, INSTRUMENT_ORDER, type InstrumentKind } from '@/lib/instruments'
 import { cn } from '@/lib/cn'
 
 interface Props {
@@ -26,6 +27,8 @@ interface Props {
   onKey: (k: number) => void
   hand: HandFilter
   onHand: (h: HandFilter) => void
+  instrument: InstrumentKind
+  onInstrument: (k: InstrumentKind) => void
 }
 
 const HANDS: { id: HandFilter; label: string }[] = [
@@ -172,7 +175,29 @@ export function TransportBar(p: Props) {
         </div>
       </div>
 
-      {/* Row 4: key grid */}
+      {/* Row 4: instrument sound (global — engine follows via AppShell/session) */}
+      <div className="flex items-center gap-2">
+        <span className="w-16 shrink-0 text-sm text-[var(--color-muted)]">Lyd</span>
+        <div className="flex gap-2">
+          {INSTRUMENT_ORDER.map((k) => (
+            <button
+              key={k}
+              onClick={() => p.onInstrument(k)}
+              aria-pressed={p.instrument === k}
+              className={cn(
+                'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
+                p.instrument === k
+                  ? 'border-[var(--color-amber)] bg-[var(--color-amber)]/15 text-[var(--color-amber)]'
+                  : 'border-[var(--color-border)] text-[var(--color-muted)]',
+              )}
+            >
+              {INSTRUMENT_LABEL[k]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Row 5: key grid */}
       <div className="flex items-start gap-2">
         <span className="mt-1.5 w-16 shrink-0 text-sm text-[var(--color-muted)]">Toneart</span>
         <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-12">
