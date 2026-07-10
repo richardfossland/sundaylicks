@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { BarChart3, BookOpen, MoreHorizontal, Plus } from 'lucide-react'
 import { MODES, ACCENT_CLASSES, type ModeId } from '@/lib/modes'
+import { useSession } from '@/lib/session'
 import { cn } from '@/lib/cn'
 
 /**
@@ -46,6 +47,18 @@ import { cn } from '@/lib/cn'
  */
 export function AppShell({ mode, children }: { mode?: ModeId; children: React.ReactNode }) {
   const current = MODES.find((m) => m.id === mode)
+
+  // Global lyd-preferanse → motor. AppShell er montert på hver side, så dette
+  // dekker Practice, /bla, oppslagsverk-demoer og vent-modus i ett. Dynamisk
+  // import holder Tone ute av shell-/server-bundelen; load() er idempotent.
+  const instrument = useSession((s) => s.instrument)
+  const loadSession = useSession((s) => s.load)
+  useEffect(() => {
+    loadSession()
+  }, [loadSession])
+  useEffect(() => {
+    void import('@/lib/playback').then((m) => m.getEngine().setInstrument(instrument))
+  }, [instrument])
 
   return (
     <div className="min-h-screen">

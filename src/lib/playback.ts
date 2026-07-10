@@ -1,13 +1,22 @@
 import * as Tone from 'tone'
 import type { Lick, HandFilter } from '@/types/lick'
+import type { InstrumentKind } from './instruments'
 import { transposedNotes } from './transpose'
 import { usePlayer } from './store'
 import { ensureAudioRunning } from './audio-unlock'
 
-// ── Salamander piano sampler (lazy) ──────────────────────────────────────────
-// A subset of the Salamander Grand samples (every minor-3rd, A0–C8) hosted on
-// the Tone.js CDN; Tone.Sampler pitch-shifts between them. ~loads on first play.
+// ── Instrumenter (lazy, cachet per kind) ─────────────────────────────────────
+// 'piano'   — Salamander Grand-samples (hver liten ters, A0–C8) fra Tone-CDN;
+//             eneste instrument med nettverkslast → eneste som rører isLoading.
+// 'elpiano' — FM-syntetisert elektrisk piano (generisk navn, ingen varemerker).
+// 'pad'     — myk fatsawtooth-flate m/ sakte attack → romklang.
+// Noder DISPOSES ALDRI ved bytte: begge trigger-sites går via ensureInstrument()
+// så dobbel lyd er umulig, og bytte-tilbake-til-piano er øyeblikkelig (ingen
+// CDN-reload). setInstrument() gjør releaseAll() på forrige node så hengende
+// toner kuttes midt i avspilling.
 const SALAMANDER_BASE = 'https://tonejs.github.io/audio/salamander/'
+
+type InstrumentNode = Tone.Sampler | Tone.PolySynth
 
 function buildSampleMap(): Record<string, string> {
   const roots = ['A', 'C', 'D#', 'F#']
@@ -39,7 +48,8 @@ export interface BuildOptions {
  * repitching. Rebuilding is only needed when the key or hand filter changes.
  */
 class PlaybackEngine {
-  private sampler: Tone.Sampler | null = null
+  private kind: InstrumentKind = 'piano'
+  private nodes: Partial<Record<InstrumentKind, InstrumentNode>> = {}
   private part: Tone.Part | null = null
   private raf: number | null = null
   private totalBeats = 0
@@ -65,18 +75,52 @@ class PlaybackEngine {
     this.ensureMetro().triggerAttackRelease(accent ? 'C6' : 'G5', '32n', time, accent ? 0.9 : 0.5)
   }
 
-  private async ensureSampler(): Promise<Tone.Sampler> {
-    if (this.sampler) return this.sampler
-    usePlayer.getState().set({ isLoading: true })
-    const sampler = new Tone.Sampler({
-      urls: buildSampleMap(),
-      baseUrl: SALAMANDER_BASE,
-      release: 1,
-    }).toDestination()
-    await Tone.loaded()
-    this.sampler = sampler
-    usePlayer.getState().set({ isLoading: false })
-    return sampler
+  /** Bytt aktivt instrument. Cachet node beholdes; forrige slippes (releaseAll). */
+  setInstrument(kind: InstrumentKind) {
+    if (kind === this.kind) return
+    this.nodes[this.kind]?.releaseAll()
+    this.kind = kind
+  }
+
+  private async ensureInstrument(): Promise<InstrumentNode> {
+    const cached = this.nodes[this.kind]
+    if (cached) return cached
+    let node: InstrumentNode
+    if (this.kind === 'piano') {
+      // Eneste instrument med nettverkslast → eneste som setter isLoading.
+      usePlayer.getState().set({ isLoading: true })
+      node = new Tone.Sampler({
+        urls: buildSampleMap(),
+        baseUrl: SALAMANDER_BASE,
+        release: 1,
+      }).toDestination()
+      await Tone.loaded()
+      usePlayer.getState().set({ isLoading: false })
+    } else if (this.kind === 'elpiano') {
+      const ep = new Tone.PolySynth(Tone.FMSynth, {
+        harmonicity: 3,
+        modulationIndex: 14,
+        envelope: { attack: 0.002, decay: 1.2, sustain: 0.1, release: 1.2 },
+        modulationEnvelope: { attack: 0.002, decay: 0.3, sustain: 0, release: 0.4 },
+      })
+      ep.maxPolyphony = 24
+      ep.volume.value = -6
+      ep.toDestination()
+      node = ep
+    } else {
+      const pad = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: 'fatsawtooth', count: 3, spread: 24 },
+        envelope: { attack: 0.6, decay: 0.4, sustain: 0.8, release: 1.8 },
+      })
+      pad.maxPolyphony = 16
+      pad.volume.value = -14
+      const verb = new Tone.Reverb({ decay: 3.5, wet: 0.35 }).toDestination()
+      await verb.ready // impulsen genereres asynkront — vent så wet-delen er med fra første tone
+      pad.connect(verb)
+      node = pad
+    }
+    this.nodes[this.kind] = node
+    return node
   }
 
   /** (Re)build the Tone.Part for a lick in the given key/hand/tempo. */
@@ -100,7 +144,8 @@ class PlaybackEngine {
 
     const part = new Tone.Part((time, ev) => {
       const freq = Tone.Frequency(ev.midi, 'midi').toFrequency()
-      this.sampler?.triggerAttackRelease(freq, ev.durTicks, time, ev.vel)
+      // Leses dynamisk per event → instrumentbytte trenger aldri Part-rebuild.
+      this.nodes[this.kind]?.triggerAttackRelease(freq, ev.durTicks, time, ev.vel)
     }, events)
     part.start(0)
 
@@ -160,14 +205,14 @@ class PlaybackEngine {
   /** Trigger a single note now (click / MIDI feedback, wait-mode). */
   async playNote(midi: number, velocity = 0.8, durationSec = 0.6) {
     await ensureAudioRunning()
-    const sampler = await this.ensureSampler()
+    const inst = await this.ensureInstrument()
     await ensureAudioRunning() // context can suspend during the async sampler load (iOS)
-    sampler.triggerAttackRelease(Tone.Frequency(midi, 'midi').toFrequency(), durationSec, undefined, velocity)
+    inst.triggerAttackRelease(Tone.Frequency(midi, 'midi').toFrequency(), durationSec, undefined, velocity)
   }
 
   async play() {
     await ensureAudioRunning()
-    await this.ensureSampler()
+    await this.ensureInstrument()
     await ensureAudioRunning() // re-resume after the async load — iOS Safari suspends
 
     // Optional one-bar count-in before the transport starts.
