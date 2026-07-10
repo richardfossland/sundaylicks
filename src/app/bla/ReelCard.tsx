@@ -8,7 +8,7 @@
 // Virtualization contract: heavy content (transposed notes + PianoRoll +
 // VexFlow) is mounted ONLY when `near` (|i − activeIndex| ≤ 1). Every other
 // section renders a light, same-height placeholder so the scroll-snap geometry
-// (163 × full-height sections) is identical whether or not the card is realised.
+// (én full-height seksjon per lick) is identical whether or not the card is realised.
 
 import { useMemo } from 'react'
 import Link from 'next/link'

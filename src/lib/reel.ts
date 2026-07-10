@@ -1,5 +1,5 @@
 // "Reels-blaing" (/bla) — a stable, random order over the whole library plus a
-// remembered scroll position, so paging through 163 licks feels like flicking a
+// remembered scroll position, so paging through the whole library feels like flicking a
 // feed instead of re-shuffling on every re-render or back-navigation.
 //
 // Two layers, mirroring daily.ts:
