@@ -25,8 +25,10 @@ const TARGET = 4
 
 // ── Pure core ────────────────────────────────────────────────────────────────
 
-/** Fisher–Yates using a seeded RNG — same seed always yields the same order. */
-function seededShuffle<T>(arr: readonly T[], rng: () => number): T[] {
+/** Fisher–Yates using a seeded RNG — same seed always yields the same order.
+ * Exported so the reel (`lib/reel.ts`) can reuse the exact same deterministic
+ * shuffle; kept here because "Dagens økt" is its original home. */
+export function seededShuffle<T>(arr: readonly T[], rng: () => number): T[] {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1))
