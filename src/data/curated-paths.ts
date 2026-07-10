@@ -38,7 +38,7 @@ export const CURATED_PATHS: CuratedPath[] = [
     id: 'p_neosoul',
     name: 'Neo-soul voicings',
     description: 'Frodige akkorder og glidende linjer — vamper, ballade-komp og neo-soul-løp.',
-    slugs: ['neosoul-ballad-c', 'neosoul-vamp-eb', 'neosoul-vamp-f', 'neosoul-groove-bb', 'neosoul-run-eb'],
+    slugs: ['neosoul-ballad-c', 'neosoul-vamp-eb', 'neosoul-quartal-vamp-f', 'neosoul-groove-bb', 'neosoul-run-eb'],
   },
   {
     id: 'p_lefthand',
