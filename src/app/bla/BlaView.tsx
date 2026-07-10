@@ -6,8 +6,8 @@
 //
 // Mechanics (see also lib/reel.ts + useReelPlayer.ts):
 //   • Paging is pure CSS scroll-snap (no JS gesture handling): a snap container
-//     whose height is `100dvh − <measured header height>` holds 163 full-height
-//     snap sections. An IntersectionObserver (threshold 0.6) names the active
+//     whose height is `100dvh − <measured header height>` holds one full-height
+//     snap section per lick. An IntersectionObserver (threshold 0.6) names the active
 //     card; keyboard Arrow/Page/Space scroll the neighbour into view.
 //   • Order is a stable random shuffle (seed in sessionStorage, 30-min TTL) so
 //     re-renders and back-navigation don't reshuffle. The active index is
