@@ -11,16 +11,18 @@ import { cn } from '@/lib/cn'
 import { Term } from '@/components/glossary/Term'
 import { KrydreTab } from './KrydreTab'
 import { OverTab } from './OverTab'
+import { SkalaTab } from './SkalaTab'
 
-type Fane = 'krydre' | 'overganger'
+type Fane = 'krydre' | 'overganger' | 'skalaer'
 
 function isFane(v: string | null): v is Fane {
-  return v === 'krydre' || v === 'overganger'
+  return v === 'krydre' || v === 'overganger' || v === 'skalaer'
 }
 
 const TABS: { key: Fane; label: string }[] = [
   { key: 'krydre', label: 'Krydre' },
   { key: 'overganger', label: 'Overganger' },
+  { key: 'skalaer', label: 'Skalaer' },
 ]
 
 const ember = ACCENT_CLASSES.ember
@@ -64,11 +66,11 @@ export function SpillView() {
           <span className="text-sm font-medium uppercase tracking-wide">Spill smartere</span>
         </div>
         <h1 className="font-display text-3xl text-[var(--color-ivory)] sm:text-4xl">
-          Naturlige overganger, og krydder for det du spiller
+          Overganger, krydder og skalaer — for det du spiller
         </h1>
         <p className="mt-2 max-w-2xl text-[var(--color-muted)]">
-          Velg <Term id="toneart">toneart</Term> under — den styrer krydder-forslagene i {keyLabel} og
-          hvor <Term id="kvintsirkel">kvintsirkelen</Term> starter.
+          Velg <Term id="toneart">toneart</Term> under — den styrer overgangene, krydder-forslagene og
+          skalaene i {keyLabel}.
         </p>
       </header>
 
@@ -99,7 +101,9 @@ export function SpillView() {
         ))}
       </div>
 
-      <div role="tabpanel">{fane === 'krydre' ? <KrydreTab /> : <OverTab />}</div>
+      <div role="tabpanel">
+        {fane === 'krydre' ? <KrydreTab /> : fane === 'overganger' ? <OverTab /> : <SkalaTab />}
+      </div>
     </div>
   )
 }
