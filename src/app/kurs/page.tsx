@@ -30,7 +30,7 @@ export default function KursPage() {
 
   return (
     <AppShell mode="kurs">
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:py-14">
+      <main className="mx-auto max-w-7xl px-4 py-10 sm:py-14">
         <header className="mb-8 max-w-2xl sm:mb-10">
           <h1 className="font-display text-3xl text-[var(--color-ivory)] sm:text-4xl">Ta et kurs</h1>
           <p className="mt-2 text-[var(--color-muted)]">
@@ -47,7 +47,7 @@ export default function KursPage() {
 
         <section aria-label="Alle kurs">
           <h2 className="mb-3 font-display text-lg text-[var(--color-ivory)]">Alle kurs</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-5">
             {allProgress.map((p) => (
               <CourseCard key={p.path.id} progress={p} />
             ))}

@@ -1,6 +1,7 @@
 'use client'
 
-import { Play, Square, Repeat, Loader2, TrendingUp, Timer, Hash, Waves } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronDown, Play, Square, Repeat, Loader2, TrendingUp, Timer, Hash, Waves } from 'lucide-react'
 import type { HandFilter } from '@/types/lick'
 import { KEY_NAMES } from '@/lib/music'
 import { INSTRUMENT_LABEL, INSTRUMENT_ORDER, type InstrumentKind } from '@/lib/instruments'
@@ -38,6 +39,9 @@ const HANDS: { id: HandFilter; label: string }[] = [
 ]
 
 export function TransportBar(p: Props) {
+  // Mobil-komprimering: rad 2–5 skjules bak «Flere kontroller» på små skjermer.
+  // Ren CSS-override (sm:flex) — desktop-DOM er identisk med før, null regresjon.
+  const [moreOpen, setMoreOpen] = useState(false)
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
       {/* Row 1: play + loop + tempo */}
@@ -103,6 +107,21 @@ export function TransportBar(p: Props) {
         </div>
       </div>
 
+      <button
+        type="button"
+        onClick={() => setMoreOpen((v) => !v)}
+        aria-expanded={moreOpen}
+        aria-controls="transport-more"
+        className="flex items-center justify-center gap-1.5 rounded-full border border-[var(--color-border)] py-2 text-sm font-medium text-[var(--color-muted)] transition-colors hover:text-[var(--color-ivory)] sm:hidden"
+      >
+        Flere kontroller
+        <ChevronDown className={cn('h-4 w-4 transition-transform', moreOpen && 'rotate-180')} />
+      </button>
+
+      <div
+        id="transport-more"
+        className={cn(moreOpen ? 'flex flex-col gap-4' : 'hidden', 'sm:flex sm:flex-col sm:gap-4')}
+      >
       {/* Row 2: rhythm feel (metronome / count-in / swing) */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="w-16 shrink-0 text-sm text-[var(--color-muted)]">Rytme</span>
@@ -217,6 +236,7 @@ export function TransportBar(p: Props) {
             </button>
           ))}
         </div>
+      </div>
       </div>
     </div>
   )

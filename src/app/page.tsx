@@ -115,7 +115,7 @@ export default function LauncherPage() {
 
   return (
     <AppShell>
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:py-14">
+      <main className="mx-auto max-w-7xl px-4 py-10 sm:py-14 xl:py-16">
         {showOnboarding && (
           <Onboarding
             onClose={() => setShowOnboarding(false)}
@@ -168,7 +168,7 @@ export default function LauncherPage() {
           </section>
         )}
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 xl:gap-5">
           {MODES.map((m) => (
             <ModeCard key={m.id} mode={m} stat={modeStats[m.id]} />
           ))}

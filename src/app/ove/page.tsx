@@ -15,7 +15,7 @@ export default function OvePage() {
   return (
     <AppShell mode="ove">
       <Suspense
-        fallback={<main className="mx-auto max-w-5xl px-4 py-8 sm:py-12 text-[var(--color-muted)]">Laster …</main>}
+        fallback={<main className="mx-auto max-w-7xl px-4 py-8 sm:py-12 text-[var(--color-muted)]">Laster …</main>}
       >
         <OveView />
       </Suspense>

@@ -9,6 +9,7 @@ import { useSession } from '@/lib/session'
 import { useCollections } from '@/lib/collections'
 import { ACCENT_CLASSES } from '@/lib/modes'
 import { loadViewState, saveViewState } from '@/lib/view-state'
+import { Select } from '@/components/Select'
 import { cn } from '@/lib/cn'
 import { CircleOfFifths } from '@/components/CircleOfFifths'
 import { ResultCard } from './ResultCard'
@@ -246,33 +247,25 @@ export function OverTab() {
             {needsFromChord(device) && (
               <label className="flex flex-col gap-1 text-sm text-[var(--color-muted)]">
                 Fra-akkord
-                <select
-                  value={fromChordOption?.value ?? ''}
-                  onChange={(e) => setFromChordValue(e.target.value)}
-                  className="rounded-lg border border-[var(--color-border)] bg-[var(--color-raised)] px-2.5 py-1.5 text-[var(--color-ivory)] outline-none focus:border-[var(--color-ember)]"
-                >
+                <Select value={fromChordOption?.value ?? ''} onChange={setFromChordValue}>
                   {fromChordOptions.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
             )}
             {needsToChord(device) && (
               <label className="flex flex-col gap-1 text-sm text-[var(--color-muted)]">
                 Til-akkord
-                <select
-                  value={toChordOption?.value ?? ''}
-                  onChange={(e) => setToChordValue(e.target.value)}
-                  className="rounded-lg border border-[var(--color-border)] bg-[var(--color-raised)] px-2.5 py-1.5 text-[var(--color-ivory)] outline-none focus:border-[var(--color-ember)]"
-                >
+                <Select value={toChordOption?.value ?? ''} onChange={setToChordValue}>
                   {toChordOptions.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
             )}
           </div>
@@ -287,7 +280,7 @@ export function OverTab() {
             value={bpm}
             onChange={(e) => setBpm(e.target.value)}
             placeholder="Auto"
-            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-raised)] px-2.5 py-1.5 text-[var(--color-ivory)] outline-none focus:border-[var(--color-ember)]"
+            className="rounded-full border border-[var(--color-border)] bg-[var(--color-raised)] px-3.5 py-2 text-sm text-[var(--color-ivory)] outline-none focus:border-[var(--color-amber)]"
           />
         </label>
       </section>

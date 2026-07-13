@@ -277,7 +277,7 @@ export function SkalaTab() {
         <div className="mb-6">
           <SpiceChordPicker diatonic={diatonic} value={chordChoice} onChange={setChordChoice} />
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {fits.map((fit, i) => {
             const fitScale = SCALE_BY_ID.get(fit.scaleId)
             if (!fitScale) return null

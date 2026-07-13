@@ -60,7 +60,7 @@ export function SpillView() {
     // A plain <div>, not <main> — both tabs can embed the Practice player
     // inline for a preview, and Practice renders its own <main>. A page must
     // not nest two <main> landmarks (same reasoning as the old /spice page).
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:py-12">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:py-12">
       <header className="mb-6">
         <div className={cn('mb-2 flex items-center gap-2', ember.text)}>
           <Wand2 className="h-5 w-5" />
