@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { BarChart3, BookOpen, MoreHorizontal, Plus } from 'lucide-react'
+import { BarChart3, BookOpen, MoreHorizontal, Plus, Settings } from 'lucide-react'
 import { MODES, ACCENT_CLASSES, type ModeId } from '@/lib/modes'
 import { useSession } from '@/lib/session'
 import { cn } from '@/lib/cn'
@@ -42,8 +42,11 @@ import { cn } from '@/lib/cn'
  *     `@/lib/modes` — that's the single source of truth AppShell, ModeCard,
  *     and every mode's own pages should read from. Don't hardcode mode
  *     names/colours in page code; import from there.
- *   - There is deliberately no global KeySelector here any more — /spill
- *     (W4) owns toneart-selection UI now.
+ *   - There is deliberately no global KeySelector in this topbar. The app's
+ *     KeySelector lives in /spill (W4, the primary toneart-selection UI) and,
+ *     as of U2, also on /innstillinger (reachable from the ⋯-menu below) so the
+ *     preference is adjustable outside a specific mode. Both write the same
+ *     `useSession` key — there is still no *header* KeySelector.
  */
 export function AppShell({ mode, children }: { mode?: ModeId; children: React.ReactNode }) {
   const current = MODES.find((m) => m.id === mode)
@@ -202,6 +205,14 @@ function OverflowMenu() {
             className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--color-ivory)] transition-colors hover:bg-[var(--color-raised)]"
           >
             <Plus className="h-4 w-4 text-[var(--color-muted)]" /> Send inn en lick
+          </Link>
+          <Link
+            role="menuitem"
+            href="/innstillinger"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--color-ivory)] transition-colors hover:bg-[var(--color-raised)]"
+          >
+            <Settings className="h-4 w-4 text-[var(--color-muted)]" /> Innstillinger
           </Link>
         </div>
       )}

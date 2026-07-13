@@ -28,9 +28,10 @@ const TABS: { key: Fane; label: string }[] = [
 const ember = ACCENT_CLASSES.ember
 
 /**
- * "Spill smartere" — the merged krydre/overganger mode. Owns the app's only
- * <KeySelector> (see AppShell.tsx's contract comment) and a `?fane=`-backed
- * tab switch between the two flows.
+ * "Spill smartere" — the merged krydre/overganger mode. This is the PRIMARY
+ * <KeySelector> home (see AppShell.tsx's contract comment); /innstillinger (U2)
+ * mounts a second one for adjusting toneart outside a mode — both write the same
+ * `useSession` key. Owns a `?fane=`-backed tab switch between its flows.
  */
 export function SpillView() {
   const searchParams = useSearchParams()

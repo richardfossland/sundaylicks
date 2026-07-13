@@ -23,7 +23,7 @@ import { fetchLick } from '@/lib/licks'
 import { transposedNotes, transposedChords } from '@/lib/transpose'
 import { getEngine } from '@/lib/playback'
 import { installAudioUnlock } from '@/lib/audio-unlock'
-import { usePlayer } from '@/lib/store'
+import { usePlayer, hydratePracticeDefaults } from '@/lib/store'
 import { KEY_NAMES, chordPitchClasses } from '@/lib/music'
 import { CATEGORY_LABEL, GENRE_LABEL } from '@/lib/labels'
 import { parseShare, buildShare } from '@/lib/share'
@@ -168,9 +168,14 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
     window.history.replaceState(null, '', `${window.location.pathname}?${qs}${extra}`)
   }, [targetKey, bpm, hand, listCtx])
 
-  // Install the iOS audio unlock on mount; dispose the engine on leave.
+  // Install the iOS audio unlock on mount; dispose the engine on leave. Also
+  // hydrate the user's metronome/count-in *defaults* into usePlayer here — once
+  // per app session (module-guarded in store.ts), so a lick opens pre-armed the
+  // way the player set it in /innstillinger. The TransportBar toggles stay
+  // ephemeral and can override for this session without writing back.
   useEffect(() => {
     installAudioUnlock()
+    hydratePracticeDefaults()
     return () => getEngine().dispose()
   }, [])
 
@@ -248,16 +253,17 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
   // can tell the previous page was inside the app (same-origin referrer) —
   // this returns you to wherever you actually came from (a list, a course, a
   // search). Otherwise fall back to a deterministic, context-correct link: the
-  // library (`/ove`) for a plain lick, the course index (`/kurs`) for a path,
-  // or the specific practice list via `?list=<id>` — which OveView now reads to
-  // reopen that list (see its mount restore), so the fallback is a real deep link.
+  // reel browse-default (`/bla`) for a plain lick (reel is now the browse
+  // entry point — see modes.ts), the course index (`/kurs`) for a path, or the
+  // specific practice list via `/ove?list=<id>` — which OveView reads to reopen
+  // that list (see its mount restore), so the list fallback is a real deep link.
   const backHref = listCtx
     ? listCtx.kind === 'daily'
       ? '/'
       : listCtx.kind === 'path'
         ? '/kurs'
         : `/ove?list=${listCtx.id}`
-    : '/ove'
+    : '/bla'
   const goBack = (e: React.MouseEvent) => {
     if (typeof document === 'undefined' || !document.referrer) return
     try {
