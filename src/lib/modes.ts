@@ -30,11 +30,16 @@ export interface ModeDef {
 
 export const MODES: ModeDef[] = [
   {
+    // NB: `slug` er 'bla' (ikke 'ove') — Øv-modus åpner nå reel-blaingen (/bla)
+    // som browse-standard; ModeCard + ModeSwitcher bygger href fra slug, så
+    // launcher-kortet og modus-bytteren peker dit automatisk. Bibliotek-
+    // arbeidsflaten lever fortsatt på /ove (nåbar via «Bla ↔ Bibliotek»-toggle);
+    // `id` forblir 'ove' så AppShell mode="ove" fortsatt matcher begge rutene.
     id: 'ove',
-    slug: 'ove',
+    slug: 'bla',
     label: 'Øv på licks',
     shortLabel: 'Øv',
-    tagline: 'Bla i biblioteket, følg tempoet og få licks inn i fingrene.',
+    tagline: 'Bla gjennom biblioteket som en feed — eller søk, filtrer og øv deg gjennom det.',
     accent: 'amber',
     icon: Dumbbell,
   },

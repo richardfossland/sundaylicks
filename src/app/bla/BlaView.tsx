@@ -24,10 +24,11 @@ import { fetchLicks } from '@/lib/licks'
 import { getProgress, type Progress } from '@/lib/progress'
 import { useSession } from '@/lib/session'
 import { loadOrCreateReelState, reelOrder, saveReelIndex } from '@/lib/reel'
+import { getReelAutoplay, setReelAutoplay } from '@/lib/prefs'
+import { ReelLibraryToggle } from '@/components/ReelLibraryToggle'
 import { ReelCard } from './ReelCard'
 import { useReelPlayer } from './useReelPlayer'
 
-const AUTOPLAY_STORAGE_KEY = 'sundaylicks_reel_autoplay'
 const INDEX_SAVE_DEBOUNCE_MS = 400
 
 export function BlaView() {
@@ -60,12 +61,7 @@ export function BlaView() {
     initialIndexRef.current = reel.index
     setActiveIndex(reel.index)
 
-    try {
-      const raw = localStorage.getItem(AUTOPLAY_STORAGE_KEY)
-      if (raw !== null) setAutoplay(raw === '1')
-    } catch {
-      /* storage blocked — keep default ON */
-    }
+    setAutoplay(getReelAutoplay())
     return () => {
       alive = false
     }
@@ -160,11 +156,7 @@ export function BlaView() {
   const toggleAutoplay = useCallback(() => {
     setAutoplay((v) => {
       const next = !v
-      try {
-        localStorage.setItem(AUTOPLAY_STORAGE_KEY, next ? '1' : '0')
-      } catch {
-        /* ignore */
-      }
+      setReelAutoplay(next)
       return next
     })
   }, [])
@@ -190,12 +182,22 @@ export function BlaView() {
   }
 
   return (
-    <div
-      ref={containerRef}
-      style={{ height: containerHeight }}
-      className="snap-y snap-mandatory overflow-y-auto overscroll-contain"
-    >
-      {ordered.map((lick, i) => (
+    // Relativ wrapper = posisjonskontekst for den flytende «Bla ↔ Bibliotek»-
+    // veksleren. Bevisst IKKE i normal flow: den absolutt-posisjoneres oppå
+    // reelen så header-målingen og 100dvh-scroll-containeren er urørt (toggle i
+    // vanlig flyt ville stjålet høyde og flyttet snap-geometrien). Wrapperen
+    // scroller ikke, så veksleren blir liggende fast øverst mens reelen blar.
+    <div className="relative" style={{ height: containerHeight }}>
+      <ReelLibraryToggle
+        active="bla"
+        className="absolute left-1/2 top-3 z-10 -translate-x-1/2 bg-[var(--color-scene)]/80 backdrop-blur"
+      />
+      <div
+        ref={containerRef}
+        style={{ height: containerHeight }}
+        className="snap-y snap-mandatory overflow-y-auto overscroll-contain"
+      >
+        {ordered.map((lick, i) => (
         <section
           key={lick.slug}
           ref={(el) => {
@@ -219,7 +221,8 @@ export function BlaView() {
             onToggleAutoplay={toggleAutoplay}
           />
         </section>
-      ))}
+        ))}
+      </div>
     </div>
   )
 }

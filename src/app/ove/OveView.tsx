@@ -10,7 +10,6 @@ import {
   Trash2,
   ListMusic,
   Search,
-  Shuffle,
   SlidersHorizontal,
   ChevronDown,
   X,
@@ -22,6 +21,7 @@ import { useCollections } from '@/lib/collections'
 import { LickCard } from '@/components/LickCard'
 import { CATEGORY_LABEL, CATEGORY_ORDER, GENRE_LABEL, GENRE_ORDER, DIFFICULTY_LABEL } from '@/lib/labels'
 import { ACCENT_CLASSES } from '@/lib/modes'
+import { ReelLibraryToggle } from '@/components/ReelLibraryToggle'
 import { loadViewState, saveViewState } from '@/lib/view-state'
 import { cn } from '@/lib/cn'
 
@@ -247,16 +247,14 @@ export function OveView() {
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:py-12">
       <header className="mb-6">
-        <h1 className="font-display text-3xl text-[var(--color-ivory)] sm:text-4xl">Øv på licks</h1>
+        <div className="mb-4">
+          <ReelLibraryToggle active="ove" />
+        </div>
+        <h1 className="font-display text-3xl text-[var(--color-ivory)] sm:text-4xl">Bibliotek</h1>
         <p className="mt-2 max-w-xl text-[var(--color-muted)]">
-          Bla i biblioteket, søk og filtrer — eller hopp rett til favorittene og øvingslistene dine.
+          Søk, filtrer og sorter hele lick-biblioteket — eller hopp rett til favorittene og
+          øvingslistene dine. Vil du heller bla deg gjennom som en feed, bytt til «Bla».
         </p>
-        <Link
-          href="/bla"
-          className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--color-amber)] px-4 py-2 text-sm font-semibold text-[var(--color-ink-on-amber)] transition-opacity hover:opacity-90"
-        >
-          <Shuffle className="h-4 w-4" /> Bla gjennom licks
-        </Link>
       </header>
 
       {/* Top-level lens: the whole library vs. what you've collected */}

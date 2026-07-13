@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { getPracticeDefaults } from './prefs'
 
 // Transport state shared between the playback engine and the UI. Key
 // highlighting is DERIVED from `currentBeat` by the components (a note sounds
@@ -23,3 +24,16 @@ export const usePlayer = create<PlayerState>((set) => ({
   countIn: false,
   set: (patch) => set(patch),
 }))
+
+// Forhåndsarmer metronom/tell-inn fra brukerens lagrede *standarder* (satt i
+// /innstillinger). Modul-guard: kjøres kun ÉN gang per app-økt — TransportBar-
+// togglene forblir flyktige, så etter denne hydreringen kan de overstyre
+// standarden for økta uten at den skrives tilbake. Kalles fra Practices
+// mount-effekt (klient), aldri under server-render.
+let practiceDefaultsApplied = false
+export function hydratePracticeDefaults() {
+  if (practiceDefaultsApplied) return
+  practiceDefaultsApplied = true
+  const d = getPracticeDefaults()
+  usePlayer.setState({ metronome: d.metronome, countIn: d.countIn })
+}
