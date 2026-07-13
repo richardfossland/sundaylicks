@@ -15,6 +15,9 @@ export const viewport: Viewport = {
   themeColor: '#171210',
   width: 'device-width',
   initialScale: 1,
+  // Extend under the notch/home-indicator so `env(safe-area-inset-*)` padding
+  // (e.g. ReelCards' safe-area-padding, inert without this) actually applies.
+  viewportFit: 'cover',
 }
 
 // The shell is mode-based now (see `AppShell`'s contract comment) rather

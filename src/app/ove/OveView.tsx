@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import {
@@ -22,6 +22,7 @@ import { useCollections } from '@/lib/collections'
 import { LickCard } from '@/components/LickCard'
 import { CATEGORY_LABEL, CATEGORY_ORDER, GENRE_LABEL, GENRE_ORDER, DIFFICULTY_LABEL } from '@/lib/labels'
 import { ACCENT_CLASSES } from '@/lib/modes'
+import { loadViewState, saveViewState } from '@/lib/view-state'
 import { cn } from '@/lib/cn'
 
 type CatFilter = Category | 'all'
@@ -51,6 +52,45 @@ function isGenre(v: string | null): v is Genre {
   return !!v && (GENRE_ORDER as string[]).includes(v)
 }
 
+/** sessionStorage key for this view's browse state (see lib/view-state.ts). */
+const VIEW_KEY = 'sundaylicks_view_ove'
+
+interface OveViewState {
+  view: ViewTab
+  mineTab: MineTab
+  cat: CatFilter
+  genre: GenreFilter
+  diff: DiffFilter
+  query: string
+  sort: SortKey
+  filterOpen: boolean
+}
+
+const SORT_KEYS = SORTS.map((s) => s.key)
+
+/** Reject a stored blob whose fields no longer map to anything valid. */
+function validateOveState(d: Record<string, unknown>): OveViewState | null {
+  const { view, mineTab, cat, genre, diff, query, sort, filterOpen } = d
+  if (view !== 'all' && view !== 'mine') return null
+  if (typeof mineTab !== 'string') return null
+  if (cat !== 'all' && !isCategory(cat as string | null)) return null
+  if (genre !== 'all' && !isGenre(genre as string | null)) return null
+  if (diff !== 'all' && diff !== 1 && diff !== 2 && diff !== 3) return null
+  if (typeof query !== 'string') return null
+  if (!(SORT_KEYS as string[]).includes(sort as string)) return null
+  if (typeof filterOpen !== 'boolean') return null
+  return {
+    view,
+    mineTab,
+    cat: cat as CatFilter,
+    genre: genre as GenreFilter,
+    diff: diff as DiffFilter,
+    query,
+    sort: sort as SortKey,
+    filterOpen,
+  }
+}
+
 /**
  * The Øv-modus library: a focused workspace over the full lick catalogue.
  *
@@ -70,6 +110,7 @@ export function OveView() {
   const searchParams = useSearchParams()
   const initialCat = searchParams.get('category')
   const initialGenre = searchParams.get('genre')
+  const initialList = searchParams.get('list')
 
   const [licks, setLicks] = useState<Lick[]>(FALLBACK_LICKS)
   const [view, setView] = useState<ViewTab>('all')
@@ -86,9 +127,14 @@ export function OveView() {
 
   const favorites = useCollections((s) => s.favorites)
   const lists = useCollections((s) => s.lists)
+  const collectionsHydrated = useCollections((s) => s.hydrated)
   const loadCollections = useCollections((s) => s.load)
   const createList = useCollections((s) => s.createList)
   const deleteList = useCollections((s) => s.deleteList)
+
+  // Guards the save effect so it never fires before the mount restore has run
+  // (which would overwrite the saved blob with the still-default state).
+  const hydratedRef = useRef(false)
 
   useEffect(() => {
     let alive = true
@@ -101,6 +147,49 @@ export function OveView() {
       alive = false
     }
   }, [loadCollections])
+
+  // Restore the browse state saved on the last in-app trip to the player, so
+  // going back from øving lands on the same filters/search/sort/list instead of
+  // silently resetting (the eier-reported bug). Precedence URL > saved > default:
+  // an explicit ?category/?genre wins over the saved value, and ?list=<id>
+  // (emitted by Practice's "Tilbake") forces the right practice list on top of
+  // everything. Runs once at mount — reading sessionStorage stays out of the
+  // server render for hydration safety. NB: deliberately NO scroll restore — the
+  // grid reflows as the async fetch resolves, so a remembered scrollY would land
+  // on the wrong card; only the filters are worth restoring (G1).
+  useEffect(() => {
+    const saved = loadViewState(VIEW_KEY, validateOveState)
+    if (saved) {
+      setView(saved.view)
+      setMineTab(saved.mineTab)
+      if (!isCategory(initialCat)) setCat(saved.cat)
+      if (!isGenre(initialGenre)) setGenre(saved.genre)
+      setDiff(saved.diff)
+      setQuery(saved.query)
+      setSort(saved.sort)
+      setFilterOpen(saved.filterOpen)
+    }
+    if (initialList) {
+      setView('mine')
+      setMineTab(initialList)
+    }
+    hydratedRef.current = true
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Persist the browse state on every change once hydrated (re-stamps the TTL).
+  useEffect(() => {
+    if (!hydratedRef.current) return
+    saveViewState(VIEW_KEY, { view, mineTab, cat, genre, diff, query, sort, filterOpen })
+  }, [view, mineTab, cat, genre, diff, query, sort, filterOpen])
+
+  // Stale-list guard: a restored (or ?list=) mineTab may point at a list that was
+  // since deleted. Once collections have actually loaded, fall back to favorites
+  // rather than showing an empty, unnamed list.
+  useEffect(() => {
+    if (!collectionsHydrated) return
+    if (mineTab !== 'favs' && !lists.some((l) => l.id === mineTab)) setMineTab('favs')
+  }, [collectionsHydrated, lists, mineTab])
 
   const bySlug = useMemo(() => new Map(licks.map((l) => [l.slug, l])), [licks])
   const showFavs = view === 'mine' && mineTab === 'favs'

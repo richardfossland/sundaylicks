@@ -31,7 +31,35 @@ import { SpiceChordPicker, type ChordChoice } from '@/components/SpiceChordPicke
 import { Term } from '@/components/glossary/Term'
 import { KEY_NAMES, chordLabel, pitchClass } from '@/lib/music'
 import { ACCENT_CLASSES } from '@/lib/modes'
+import { loadViewState, saveViewState } from '@/lib/view-state'
 import { cn } from '@/lib/cn'
+
+/** sessionStorage key for this tab's browse state (see lib/view-state.ts). */
+const VIEW_KEY = 'sundaylicks_view_skala'
+
+interface SkalaViewState {
+  scaleId: string
+  chordChoice: ChordChoice
+}
+
+/** Validate a chord pick down to {root 0–11, quality, roman?}, or null. */
+function asChord(v: unknown): ChordChoice | null {
+  if (typeof v !== 'object' || v === null) return null
+  const c = v as Record<string, unknown>
+  if (typeof c.root !== 'number' || !Number.isInteger(c.root) || c.root < 0 || c.root > 11) return null
+  if (typeof c.quality !== 'string') return null
+  if (c.roman !== undefined && typeof c.roman !== 'string') return null
+  return { root: c.root, quality: c.quality, ...(typeof c.roman === 'string' ? { roman: c.roman } : {}) }
+}
+
+/** Reject a stored blob whose scaleId no longer exists or chord is malformed. */
+function validateSkalaState(d: Record<string, unknown>): SkalaViewState | null {
+  const { scaleId, chordChoice } = d
+  if (typeof scaleId !== 'string' || !SCALE_BY_ID.has(scaleId)) return null
+  const chord = asChord(chordChoice)
+  if (!chord) return null
+  return { scaleId, chordChoice: chord }
+}
 
 // Tone.js touches the AudioContext — must never run during SSR / the Cloudflare
 // Worker render, same as KrydreTab/OverTab.
@@ -73,6 +101,11 @@ export function SkalaTab() {
   const isLoading = usePlayer((s) => s.isLoading)
   const isPlaying = usePlayer((s) => s.isPlaying)
   const previewRef = useRef<HTMLDivElement>(null)
+  // Gates lagre-effekten til restore har kjørt.
+  const hydratedRef = useRef(false)
+  // Settes når restore ga en akkord OG en session-hydrering fortsatt kommer —
+  // følg-effekten absorberer da den ene endringen uten å overstyre restore.
+  const pinnedChordRef = useRef(false)
 
   const rootPc = sessionKey.root
 
@@ -82,10 +115,38 @@ export function SkalaTab() {
   }, [])
 
   // Følg toneart: la akkordvelgeren lande på tonika når «din toneart» endres.
+  // Gated på hydratedRef så en gjenopprettet akkord overlever den asynkrone
+  // session-hydreringen; pinnedChordRef svelger den ene hydrerings-endringen.
   useEffect(() => {
+    if (!hydratedRef.current) return
+    if (pinnedChordRef.current) {
+      pinnedChordRef.current = false
+      return
+    }
     const tonic = diatonicChords(sessionKey)[0]
     setChordChoice({ root: tonic.root, quality: tonic.quality, roman: tonic.roman })
   }, [sessionKey])
+
+  // Gjenopprett fanens browse-tilstand (valgt skala + akkord) fra forrige
+  // øving-tur, så et fanebytte eller retur fra spilleren ikke nullstiller den.
+  // Kjører én gang ved mount. NB: `preview`/`playingId` lagres ALDRI (G2).
+  useEffect(() => {
+    const saved = loadViewState(VIEW_KEY, validateSkalaState)
+    if (saved) {
+      setScaleId(saved.scaleId)
+      setChordChoice(saved.chordChoice)
+      // Pin kun når en hydrerings-endring fortsatt kommer.
+      if (!useSession.getState().hydrated) pinnedChordRef.current = true
+    }
+    hydratedRef.current = true
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Lagre ved hver endring når hydrert (re-stempler TTL). Aldri preview/playingId.
+  useEffect(() => {
+    if (!hydratedRef.current) return
+    saveViewState(VIEW_KEY, { scaleId, chordChoice })
+  }, [scaleId, chordChoice])
 
   // Nullstill knappe-spinneren når motoren slutter å spille (engangs-lyder).
   useEffect(() => {
