@@ -11,6 +11,7 @@ import { LickCard } from '@/components/LickCard'
 import { SpiceChordPicker, type ChordChoice } from '@/components/SpiceChordPicker'
 import { SpiceGeneratedCard } from '@/components/SpiceGeneratedCard'
 import { Select } from '@/components/Select'
+import { CURATED_PROGRESSIONS, PROGRESSION_BY_ID } from '@/data/progressions'
 import { Term } from '@/components/glossary/Term'
 import { ChordStrip } from '@/components/ChordStrip'
 import { GENRE_LABEL, GENRE_ORDER } from '@/lib/labels'
@@ -332,8 +333,37 @@ export function KrydreTab() {
         open={showProgression}
         onToggle={setShowProgression}
       >
+        {/* Populære progresjoner (kuratert fra free-midi-chords, MIT — se
+            src/data/progressions.ts): ett valg fyller byggeren i din toneart. */}
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-[var(--color-muted)]">Populære progresjoner</span>
+          <Select
+            value=""
+            onChange={(id) => {
+              const p = PROGRESSION_BY_ID.get(id)
+              if (!p) return
+              setProgression(
+                p.steps.map((st) => ({
+                  root: (sessionKey.root + st.offset) % 12,
+                  quality: st.quality,
+                  roman: st.roman,
+                })),
+              )
+            }}
+            ariaLabel="Velg en populær progresjon"
+          >
+            <option value="" disabled>
+              Velg en rundgang …
+            </option>
+            {CURATED_PROGRESSIONS.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} — {p.mood}
+              </option>
+            ))}
+          </Select>
+        </div>
         {progression.length === 0 ? (
-          <p className="text-[var(--color-muted)]">Ingen akkorder lagt til enda — bruk «Legg … i progresjon» over.</p>
+          <p className="text-[var(--color-muted)]">Ingen akkorder lagt til enda — velg en rundgang over, eller bruk «Legg … i progresjon».</p>
         ) : (
           <>
             <div className="mb-3 flex flex-wrap items-center gap-2">

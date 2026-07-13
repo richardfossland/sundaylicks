@@ -45,7 +45,9 @@ export function secondsPerBeat(bpm: number): number {
 }
 
 // Chord quality → semitone intervals from the root, for the keyboard overlay.
-const CHORD_INTERVALS: Record<string, number[]> = {
+// Eksportert for datavalidering (progressions.test.ts) — kvaliteter utenfor
+// dette settet ville gitt tomt/feil akkordtone-overlegg.
+export const CHORD_INTERVALS: Record<string, number[]> = {
   '': [0, 4, 7],
   m: [0, 3, 7],
   '7': [0, 4, 7, 10],
