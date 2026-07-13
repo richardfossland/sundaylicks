@@ -31,7 +31,51 @@ import {
   VOICING_STYLE_LABEL,
   type ProgressionStep,
 } from '@/lib/spice'
+import { loadViewState, saveViewState } from '@/lib/view-state'
 import { cn } from '@/lib/cn'
+
+/** sessionStorage key for this tab's browse state (see lib/view-state.ts). */
+const VIEW_KEY = 'sundaylicks_view_krydre'
+
+interface KrydreViewState {
+  genre: Genre | 'all'
+  level: TransitionLevel
+  chordChoice: ChordChoice
+  progression: ProgressionStep[]
+  showProgression: boolean
+  showLibrary: boolean
+}
+
+/** Validate a chord pick down to {root 0–11, quality, roman?}, or null. */
+function asChord(v: unknown): ChordChoice | null {
+  if (typeof v !== 'object' || v === null) return null
+  const c = v as Record<string, unknown>
+  if (typeof c.root !== 'number' || !Number.isInteger(c.root) || c.root < 0 || c.root > 11) return null
+  if (typeof c.quality !== 'string') return null
+  if (c.roman !== undefined && typeof c.roman !== 'string') return null
+  return { root: c.root, quality: c.quality, ...(typeof c.roman === 'string' ? { roman: c.roman } : {}) }
+}
+
+/** Reject a stored blob whose fields no longer map to anything valid. */
+function validateKrydreState(d: Record<string, unknown>): KrydreViewState | null {
+  const { genre, level, chordChoice, progression, showProgression, showLibrary } = d
+  if (genre !== 'all' && !(GENRE_ORDER as string[]).includes(genre as string)) return null
+  if (level !== 'simple' && level !== 'intermediate' && level !== 'advanced') return null
+  const chord = asChord(chordChoice)
+  if (!chord) return null
+  if (!Array.isArray(progression)) return null
+  const steps = progression.map(asChord)
+  if (steps.some((s) => s === null)) return null
+  if (typeof showProgression !== 'boolean' || typeof showLibrary !== 'boolean') return null
+  return {
+    genre: genre as Genre | 'all',
+    level,
+    chordChoice: chord,
+    progression: steps as ProgressionStep[],
+    showProgression,
+    showLibrary,
+  }
+}
 
 // Tone.js touches the AudioContext — must never run during SSR / the Cloudflare
 // Worker render, same as the /lick/[slug] page.
@@ -67,6 +111,12 @@ export function KrydreTab() {
   const [chordChoice, setChordChoice] = useState<ChordChoice>({ root: sessionKey.root, quality: 'maj7' })
 
   const previewRef = useRef<HTMLDivElement>(null)
+  // Gates the save effect until the mount restore has run.
+  const hydratedRef = useRef(false)
+  // Set when the restore supplied a chord AND a session-hydration key change is
+  // still pending — the seed effect then adopts that change as a baseline
+  // without clobbering the restored pick (see the two effects below).
+  const pinnedChordRef = useRef(false)
 
   useEffect(() => {
     let alive = true
@@ -81,11 +131,48 @@ export function KrydreTab() {
 
   // Keep the chord picker's default landing on the current key's tonic
   // whenever "din toneart" changes — the user can still pick freely after.
+  // Gated on hydratedRef so a restored chord (below) survives the async session
+  // hydration; `pinnedChordRef` absorbs that one hydration change so we don't
+  // reseed over the restore.
   useEffect(() => {
+    if (!hydratedRef.current) return
+    if (pinnedChordRef.current) {
+      pinnedChordRef.current = false
+      return
+    }
     const tonic = diatonicChords(sessionKey)[0]
     setChordChoice({ root: tonic.root, quality: tonic.quality, roman: tonic.roman })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionKey.root, sessionKey.mode])
+
+  // Restore the tab's browse state saved on the last in-app trip to the player,
+  // so a fane-bytte or a return from øving keeps the progression, chord and
+  // filters instead of resetting. Runs once at mount (keeps sessionStorage out
+  // of the server render). NB: `preview` is deliberately never persisted (G2) —
+  // remounting the player uninvited would be jarring.
+  useEffect(() => {
+    const saved = loadViewState(VIEW_KEY, validateKrydreState)
+    if (saved) {
+      setGenre(saved.genre)
+      setLevel(saved.level)
+      setChordChoice(saved.chordChoice)
+      setProgression(saved.progression)
+      setShowProgression(saved.showProgression)
+      setShowLibrary(saved.showLibrary)
+      // Only pin when a hydration key change is still coming; if the session is
+      // already hydrated, none fires and pinning would eat the user's first
+      // genuine toneart change.
+      if (!useSession.getState().hydrated) pinnedChordRef.current = true
+    }
+    hydratedRef.current = true
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Persist on every change once hydrated (re-stamps the TTL). Never `preview`.
+  useEffect(() => {
+    if (!hydratedRef.current) return
+    saveViewState(VIEW_KEY, { genre, level, chordChoice, progression, showProgression, showLibrary })
+  }, [genre, level, chordChoice, progression, showProgression, showLibrary])
 
   const difficulty: Difficulty = LEVEL_TO_DIFFICULTY[level]
   const effectiveGenre: Genre = genre === 'all' ? 'jazz' : genre

@@ -8,6 +8,7 @@ import type { Lick } from '@/types/lick'
 import { useSession } from '@/lib/session'
 import { useCollections } from '@/lib/collections'
 import { ACCENT_CLASSES } from '@/lib/modes'
+import { loadViewState, saveViewState } from '@/lib/view-state'
 import { cn } from '@/lib/cn'
 import { CircleOfFifths } from '@/components/CircleOfFifths'
 import { ResultCard } from './ResultCard'
@@ -42,6 +43,44 @@ const MODE_LABEL: Record<FlowMode, string> = {
 
 const ember = ACCENT_CLASSES.ember
 
+/** sessionStorage key for this tab's browse state (see lib/view-state.ts). */
+const VIEW_KEY = 'sundaylicks_view_over'
+
+const DEVICES: TransitionDevice[] = ['modulate', 'wander', 'reharm', 'bass-walk']
+
+interface OverViewState {
+  mode: FlowMode
+  from: Key
+  to: Key
+  device: TransitionDevice
+  fromChordValue: string | null
+  toChordValue: string | null
+  bpm: string
+}
+
+/** Validate a stored Key down to {root 0–11, mode}, or null. */
+function asKey(v: unknown): Key | null {
+  if (typeof v !== 'object' || v === null) return null
+  const k = v as Record<string, unknown>
+  if (typeof k.root !== 'number' || !Number.isInteger(k.root) || k.root < 0 || k.root > 11) return null
+  if (k.mode !== 'major' && k.mode !== 'minor') return null
+  return { root: k.root, mode: k.mode }
+}
+
+/** Reject a stored blob whose fields no longer map to anything valid. */
+function validateOverState(d: Record<string, unknown>): OverViewState | null {
+  const { mode, from, to, device, fromChordValue, toChordValue, bpm } = d
+  if (mode !== 'wander' && mode !== 'modulate') return null
+  const fromKey = asKey(from)
+  const toKey = asKey(to)
+  if (!fromKey || !toKey) return null
+  if (!DEVICES.includes(device as TransitionDevice)) return null
+  if (fromChordValue !== null && typeof fromChordValue !== 'string') return null
+  if (toChordValue !== null && typeof toChordValue !== 'string') return null
+  if (typeof bpm !== 'string') return null
+  return { mode, from: fromKey, to: toKey, device: device as TransitionDevice, fromChordValue, toChordValue, bpm }
+}
+
 /**
  * "Overganger" — the /transitions flow, unchanged in substance (kvintsirkel +
  * device + resultatkort), just inlined: no more "back to dashboard" link (the
@@ -63,6 +102,8 @@ export function OverTab() {
   const [preview, setPreview] = useState<Lick | null>(null)
 
   const previewRef = useRef<HTMLDivElement>(null)
+  // Gates the save effect until the mount restore has run.
+  const hydratedRef = useRef(false)
 
   useEffect(() => {
     loadCollections()
@@ -77,6 +118,33 @@ export function OverTab() {
     setFrom(sessionKey)
     setTo(sessionKey)
   }, [sessionKey])
+
+  // Restore the tab's browse state saved on the last in-app trip to the player,
+  // so a fane-bytte or return from øving keeps the kvintsirkel picks, device and
+  // tempo instead of resetting. Runs once at mount, AFTER the seed effect above,
+  // so it wins; marking `syncedFromSession` also stops the async session
+  // hydration from re-seeding "fra/til" over the restored keys. Never `preview`.
+  useEffect(() => {
+    const saved = loadViewState(VIEW_KEY, validateOverState)
+    if (saved) {
+      setMode(saved.mode)
+      setFrom(saved.from)
+      setTo(saved.to)
+      setDevice(saved.device)
+      setFromChordValue(saved.fromChordValue)
+      setToChordValue(saved.toChordValue)
+      setBpm(saved.bpm)
+      syncedFromSession.current = true
+    }
+    hydratedRef.current = true
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Persist on every change once hydrated (re-stamps the TTL). Never `preview`.
+  useEffect(() => {
+    if (!hydratedRef.current) return
+    saveViewState(VIEW_KEY, { mode, from, to, device, fromChordValue, toChordValue, bpm })
+  }, [mode, from, to, device, fromChordValue, toChordValue, bpm])
 
   // In "vandre" mode there is only ever one key — always mirror `from`.
   const effectiveTo = mode === 'wander' ? from : to

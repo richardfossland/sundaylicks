@@ -24,7 +24,24 @@ import {
 } from '@/data/glossary'
 import { DEMO_BY_TERM_ID } from '@/data/glossary-demos'
 import { installAudioUnlock } from '@/lib/audio-unlock'
+import { loadViewState, saveViewState } from '@/lib/view-state'
 import { cn } from '@/lib/cn'
+
+/** sessionStorage key for the glossary's browse state (see lib/view-state.ts). */
+const VIEW_KEY = 'sundaylicks_view_glossary'
+
+interface GlossaryViewState {
+  query: string
+  expanded: string[]
+}
+
+/** Reject a malformed blob; drop any expanded ids that no longer exist. */
+function validateGlossaryState(d: Record<string, unknown>): GlossaryViewState | null {
+  const { query, expanded } = d
+  if (typeof query !== 'string') return null
+  if (!Array.isArray(expanded) || !expanded.every((x) => typeof x === 'string')) return null
+  return { query, expanded: expanded.filter((id) => GLOSSARY_BY_ID.has(id)) }
+}
 
 // Én dynamisk import for hele appen — behold på modulnivå så den ikke gjenskapes
 // per render. `loading` gir en rolig plassholder mens Tone-bunten hentes.
@@ -44,6 +61,8 @@ export function GlossaryBrowser() {
   const [activeCategory, setActiveCategory] = useState<GlossaryCategory | null>(null)
   const [showTop, setShowTop] = useState(false)
   const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Gates the save effect until the mount restore has run.
+  const hydratedRef = useRef(false)
 
   const isSearching = query.trim().length > 0
 
@@ -89,6 +108,25 @@ export function GlossaryBrowser() {
   function scrollToCategory(category: GlossaryCategory) {
     document.getElementById(`cat-${category}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
+
+  // ── Gjenopprett browse-tilstand (søk + ekspanderte) FØR hash-håndteringen ──
+  // Kjører én gang ved mount, før init-effekten under, slik at en #hash-dyplenke
+  // legger seg oppå det gjenopprettede settet i stedet for å bli overskrevet.
+  useEffect(() => {
+    const saved = loadViewState(VIEW_KEY, validateGlossaryState)
+    if (saved) {
+      setQuery(saved.query)
+      if (saved.expanded.length > 0) setExpanded(new Set(saved.expanded))
+    }
+    hydratedRef.current = true
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Lagre søk + ekspanderte (Set→array) ved hver endring når hydrert.
+  useEffect(() => {
+    if (!hydratedRef.current) return
+    saveViewState(VIEW_KEY, { query, expanded: Array.from(expanded) })
+  }, [query, expanded])
 
   // ── Init: lyd-unlock + hash-dyplenke ───────────────────────────────────────
   useEffect(() => {

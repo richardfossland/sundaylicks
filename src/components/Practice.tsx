@@ -247,15 +247,15 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
   // Single "Tilbake" affordance: prefer a real browser back-navigation when we
   // can tell the previous page was inside the app (same-origin referrer) —
   // this returns you to wherever you actually came from (a list, a course, a
-  // search). Otherwise fall back to a deterministic, context-correct link:
-  // the library (`/ove`) for a plain lick, or the course/list you were
-  // browsing, carried over via the same `?path=`/`?list=` params the
-  // library/course views already use to build `/lick/[slug]` links.
+  // search). Otherwise fall back to a deterministic, context-correct link: the
+  // library (`/ove`) for a plain lick, the course index (`/kurs`) for a path,
+  // or the specific practice list via `?list=<id>` — which OveView now reads to
+  // reopen that list (see its mount restore), so the fallback is a real deep link.
   const backHref = listCtx
     ? listCtx.kind === 'daily'
       ? '/'
       : listCtx.kind === 'path'
-        ? `/kurs?path=${listCtx.id}`
+        ? '/kurs'
         : `/ove?list=${listCtx.id}`
     : '/ove'
   const goBack = (e: React.MouseEvent) => {
