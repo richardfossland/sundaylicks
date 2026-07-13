@@ -17,7 +17,7 @@ export default function SpillPage() {
     <AppShell mode="spill">
       <Suspense
         fallback={
-          <main className="mx-auto max-w-5xl px-4 py-8 text-[var(--color-muted)] sm:py-12">Laster …</main>
+          <main className="mx-auto max-w-7xl px-4 py-8 text-[var(--color-muted)] sm:py-12">Laster …</main>
         }
       >
         <SpillView />

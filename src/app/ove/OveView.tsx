@@ -19,6 +19,7 @@ import { FALLBACK_LICKS, fetchLicks } from '@/lib/licks'
 import { getProgress, type Progress } from '@/lib/progress'
 import { useCollections } from '@/lib/collections'
 import { LickCard } from '@/components/LickCard'
+import { Select } from '@/components/Select'
 import { CATEGORY_LABEL, CATEGORY_ORDER, GENRE_LABEL, GENRE_ORDER, DIFFICULTY_LABEL } from '@/lib/labels'
 import { ACCENT_CLASSES } from '@/lib/modes'
 import { ReelLibraryToggle } from '@/components/ReelLibraryToggle'
@@ -245,7 +246,7 @@ export function OveView() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8 sm:py-12">
+    <main className="mx-auto max-w-7xl px-4 py-8 sm:py-12">
       <header className="mb-6">
         <div className="mb-4">
           <ReelLibraryToggle active="ove" />
@@ -343,17 +344,13 @@ export function OveView() {
             <FilterToggleButton open={filterOpen} count={activeFilterCount} onClick={() => setFilterOpen((v) => !v)} />
             <div className="flex items-center gap-2">
               <span className="text-sm text-[var(--color-muted)]">Sorter</span>
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value as SortKey)}
-                className="rounded-full border border-[var(--color-border)] bg-[var(--color-raised)] px-3 py-2 text-sm text-[var(--color-ivory)] outline-none focus:border-[var(--color-amber)]"
-              >
+              <Select value={sort} onChange={(v) => setSort(v as SortKey)} ariaLabel="Sorter licks">
                 {SORTS.map((s) => (
                   <option key={s.key} value={s.key}>
                     {s.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
 
@@ -464,7 +461,7 @@ export function OveView() {
               : 'Ingen licks matcher filtrene.'}
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 xl:gap-5">
           {filtered.map((l) => (
             <LickCard
               key={l.slug}

@@ -66,7 +66,7 @@ export function AppShell({ mode, children }: { mode?: ModeId; children: React.Re
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 border-b border-[var(--color-border)] bg-[var(--color-scene)]/95 backdrop-blur supports-[backdrop-filter]:bg-[var(--color-scene)]/80">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-3">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <Link
               href="/"

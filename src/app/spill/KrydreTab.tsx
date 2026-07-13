@@ -10,6 +10,7 @@ import { useSession } from '@/lib/session'
 import { LickCard } from '@/components/LickCard'
 import { SpiceChordPicker, type ChordChoice } from '@/components/SpiceChordPicker'
 import { SpiceGeneratedCard } from '@/components/SpiceGeneratedCard'
+import { Select } from '@/components/Select'
 import { Term } from '@/components/glossary/Term'
 import { ChordStrip } from '@/components/ChordStrip'
 import { GENRE_LABEL, GENRE_ORDER } from '@/lib/labels'
@@ -296,7 +297,7 @@ export function KrydreTab() {
             <h3 className="mb-2 text-sm font-medium uppercase tracking-wide text-[var(--color-muted)]">
               Bibliotek-fills over {chordLabel(chordChoice.root, chordChoice.quality)}
             </h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {fills.map((l) => (
                 <LickCard key={l.slug} lick={l} targetKey={chordChoice.root} />
               ))}
@@ -307,7 +308,7 @@ export function KrydreTab() {
         <div className="mb-6">
           <h3 className="text-sm font-medium uppercase tracking-wide text-[var(--color-muted)]">Reharm-forslag</h3>
           <p className="mb-2 text-xs text-[var(--color-muted)]">Samme sted i sangen, rikere akkorder.</p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {reharmLicks.map(({ badge, lick: l }) => (
               <SpiceGeneratedCard key={l.id} lick={l} badge={badge} active={preview?.id === l.id} onPlay={() => play(l)} />
             ))}
@@ -317,7 +318,7 @@ export function KrydreTab() {
         <div>
           <h3 className="text-sm font-medium uppercase tracking-wide text-[var(--color-muted)]">Voicinger</h3>
           <p className="mb-2 text-xs text-[var(--color-muted)]">Samme akkord, ulike måter å legge den på.</p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {voicingLicks.map(({ badge, lick: l }) => (
               <SpiceGeneratedCard key={l.id} lick={l} badge={badge} active={preview?.id === l.id} onPlay={() => play(l)} />
             ))}
@@ -363,7 +364,7 @@ export function KrydreTab() {
             <div className="mb-5">
               <ChordStrip chords={progressionChords} beats={progression.length * 4} currentBeat={-1} />
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {progressionSuggestions.map(({ step, lick: l }) => (
                 <SpiceGeneratedCard
                   key={l.id}
@@ -386,7 +387,7 @@ export function KrydreTab() {
           groups.map((g) => (
             <div key={g.category} className="mb-6 last:mb-0">
               <h3 className="mb-2 text-sm font-medium uppercase tracking-wide text-[var(--color-muted)]">{g.label}</h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {g.items.map((l) => (
                   <LickCard key={l.slug} lick={l} targetKey={sessionKey.root} />
                 ))}
@@ -425,17 +426,13 @@ function FilterSelect({
   return (
     <label className="flex items-center gap-2 text-sm text-[var(--color-muted)]">
       {label}
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="rounded-full border border-[var(--color-border)] bg-[var(--color-raised)] px-3 py-2 text-sm text-[var(--color-ivory)] outline-none focus:border-[var(--color-ember)]"
-      >
+      <Select value={value} onChange={onChange} ariaLabel={label}>
         {options.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
           </option>
         ))}
-      </select>
+      </Select>
     </label>
   )
 }
