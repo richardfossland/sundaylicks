@@ -2,13 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, GraduationCap, X } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { getProgress, type Progress } from '@/lib/progress'
 import { computeAllCourseProgress, pickContinueCourse, resumeStep, type CourseProgress } from './course-progress'
 import { CourseCard } from './CourseCard'
-
-const SEEN_KURS_INTRO_KEY = 'sundaylicks_seen_kurs_intro'
 
 /**
  * Kurs-modus overview — a calm, focused list of the curated learning paths
@@ -16,28 +14,16 @@ const SEEN_KURS_INTRO_KEY = 'sundaylicks_seen_kurs_intro'
  * practice log (`@/lib/progress`). Stepping into a course hands off to the
  * existing Practice view via `?path=<id>&i=<n>` — same mechanism the old
  * dashboard's course grid used, unchanged here.
+ *
+ * NB: kurs-forklaringen som lå her (det gamle IntroBanner-et) er nå foldet inn i
+ * den interaktive onboardingen (steg 4 «Bla og øv»), så siden starter rent.
  */
 export default function KursPage() {
   const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {}, lastPracticed: {} })
-  const [showIntro, setShowIntro] = useState(false)
 
   useEffect(() => {
     setProgress(getProgress())
-    try {
-      if (!localStorage.getItem(SEEN_KURS_INTRO_KEY)) setShowIntro(true)
-    } catch {
-      /* storage blocked — just skip the banner */
-    }
   }, [])
-
-  function dismissIntro() {
-    setShowIntro(false)
-    try {
-      localStorage.setItem(SEEN_KURS_INTRO_KEY, '1')
-    } catch {
-      /* storage blocked — nothing to persist, banner just won't return this session */
-    }
-  }
 
   const allProgress = useMemo(() => computeAllCourseProgress(progress.practiced), [progress.practiced])
   const continueCourse = useMemo(() => pickContinueCourse(allProgress), [allProgress])
@@ -45,8 +31,6 @@ export default function KursPage() {
   return (
     <AppShell mode="kurs">
       <main className="mx-auto max-w-5xl px-4 py-10 sm:py-14">
-        {showIntro && <IntroBanner onDismiss={dismissIntro} />}
-
         <header className="mb-8 max-w-2xl sm:mb-10">
           <h1 className="font-display text-3xl text-[var(--color-ivory)] sm:text-4xl">Ta et kurs</h1>
           <p className="mt-2 text-[var(--color-muted)]">
@@ -96,29 +80,5 @@ function ContinueCourseCard({ progress }: { progress: CourseProgress }) {
         Fortsett <ArrowRight className="h-4 w-4" />
       </span>
     </Link>
-  )
-}
-
-function IntroBanner({ onDismiss }: { onDismiss: () => void }) {
-  return (
-    <div className="animate-fade-in mb-8 flex items-start gap-3 rounded-2xl border border-[var(--color-sea)]/30 bg-[var(--color-sea)]/8 p-4 sm:p-5">
-      <GraduationCap className="mt-0.5 h-5 w-5 shrink-0 text-[var(--color-sea)]" />
-      <div className="min-w-0 flex-1">
-        <p className="font-display text-base text-[var(--color-ivory)]">Hva er et kurs?</p>
-        <p className="mt-1 text-sm leading-relaxed text-[var(--color-muted)]">
-          Et kurs er en ferdig sammensatt rekkefølge av licks fra biblioteket — spilt steg for steg tar
-          den deg fra et tema til mestring. Du velger tempo selv underveis; kurset holder styr på hvor
-          langt du er kommet.
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={onDismiss}
-        aria-label="Lukk forklaringen"
-        className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[var(--color-muted)] transition-colors hover:text-[var(--color-ivory)]"
-      >
-        <X className="h-4 w-4" />
-      </button>
-    </div>
   )
 }
