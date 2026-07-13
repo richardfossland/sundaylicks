@@ -58,4 +58,11 @@ export const CURATED_PATHS: CuratedPath[] = [
     description: 'Fra rolig bolero og bossa til montuno, samba og cha-cha — hold claven, la det svinge.',
     slugs: ['latin-bolero-g', 'latin-bossa-am', 'latin-montuno-c', 'latin-samba-c', 'latin-chacha-a'],
   },
+  {
+    id: 'p_reels',
+    name: 'Reels-vokabularet',
+    description:
+      'Lyden fra feeden din — neo-soul-lommer, golden hour, gospel-runs og looper i reels-format. Korte, lærbare og umiddelbart brukbare.',
+    slugs: ['reels-neosoul-am9-loop', 'reels-run-fra-nonen-c', 'reels-goldenhour-arp-c', 'reels-gm9-fill', 'reels-biii-loop-g', 'reels-ending-iv-m6-eb', 'reels-dobbel-run-f'],
+  },
 ]
