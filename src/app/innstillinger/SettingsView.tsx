@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { Music, Volume2, Play, Timer, Sparkles, Download, Trash2 } from 'lucide-react'
 import { KeySelector } from '@/components/KeySelector'
 import { useSession } from '@/lib/session'
@@ -15,6 +15,12 @@ import {
 import { collectExportData } from '@/lib/export-data'
 import { cn } from '@/lib/cn'
 
+// Onboarding-overlayet drar inn Tone via audio-unlock → last det klient-only,
+// og bare når brukeren faktisk ber om å se introen igjen.
+const Onboarding = dynamic(() => import('@/components/onboarding/Onboarding').then((m) => m.Onboarding), {
+  ssr: false,
+})
+
 /**
  * /innstillinger — én rolig side med alle enhets-preferanser samlet. Alt her er
  * rent lokalt (samme localStorage som resten av appen). Toneart + lyd skriver
@@ -24,8 +30,6 @@ import { cn } from '@/lib/cn'
  * paint aldri viser feil av/på-tilstand.
  */
 export function SettingsView() {
-  const router = useRouter()
-
   // Toneart + lyd: useSession (egen hydrering via load()).
   const instrument = useSession((s) => s.instrument)
   const setInstrument = useSession((s) => s.setInstrument)
@@ -38,6 +42,7 @@ export function SettingsView() {
   const [countIn, setCountIn] = useState(false)
 
   const [confirmReset, setConfirmReset] = useState(false)
+  const [showIntro, setShowIntro] = useState(false)
 
   useEffect(() => {
     loadSession()
@@ -68,19 +73,6 @@ export function SettingsView() {
       setPracticeDefaults({ countIn: next })
       return next
     })
-  }
-
-  // «Se introduksjonen igjen» — U2-interim: fjern onboarding-flaggene og send
-  // til forsiden, som viser introen på nytt. U3 bytter dette til å åpne
-  // onboarding-overlayet direkte (så denne knappen aldri er «død»).
-  const onReplayIntro = () => {
-    try {
-      localStorage.removeItem('sundaylicks_onboarded')
-      localStorage.removeItem('sundaylicks_seen_intro')
-    } catch {
-      /* storage blocked — ignore */
-    }
-    router.push('/')
   }
 
   const onExport = () => {
@@ -126,7 +118,12 @@ export function SettingsView() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
+    <>
+      {/* Se introduksjonen igjen: åpne overlayet direkte. Ingen onStartBrowsing →
+          fullføring herfra navigerer ikke, den bare lukker overlayet. Flagget
+          røres ikke ved lukking (brukeren er allerede onboarded). */}
+      {showIntro && <Onboarding onClose={() => setShowIntro(false)} />}
+      <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
       <header className="mb-8">
         <h1 className="font-display text-3xl text-[var(--color-ivory)] sm:text-4xl">Innstillinger</h1>
         <p className="mt-2 max-w-xl text-[var(--color-muted)]">
@@ -211,7 +208,7 @@ export function SettingsView() {
           </p>
           <button
             type="button"
-            onClick={onReplayIntro}
+            onClick={() => setShowIntro(true)}
             className="rounded-full border border-[var(--color-border)] bg-[var(--color-raised)] px-4 py-2 text-sm font-medium text-[var(--color-ivory)] transition-colors hover:border-[var(--color-amber)]"
           >
             Se introduksjonen igjen
@@ -268,6 +265,7 @@ export function SettingsView() {
         </Section>
       </div>
     </main>
+    </>
   )
 }
 

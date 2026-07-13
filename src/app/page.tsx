@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Sparkles, X } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { useRouter } from 'next/navigation'
+import { ArrowRight } from 'lucide-react'
 import type { Lick } from '@/types/lick'
 import { FALLBACK_LICKS, fetchLicks } from '@/lib/licks'
 import { getProgress, type Progress } from '@/lib/progress'
@@ -12,22 +14,32 @@ import { CATEGORY_LABEL, GENRE_LABEL } from '@/lib/labels'
 import { CURATED_PATHS } from '@/data/curated-paths'
 import { computeCourseProgress } from '@/app/kurs/course-progress'
 import { MODES, type ModeId } from '@/lib/modes'
+import { isOnboarded, setOnboarded, shouldShowOnboarding } from '@/lib/onboarding'
 import { AppShell } from '@/components/AppShell'
 import { ModeCard } from '@/components/ModeCard'
 import { DailyCard } from '@/components/DailyCard'
-import { cn } from '@/lib/cn'
 
+/** Legacy: det gamle intro-banneret. Beholdt kun for å migrere gamle brukere
+ * stille (så de aldri får den nye onboardingen tvunget på seg). */
 const SEEN_INTRO_KEY = 'sundaylicks_seen_intro'
+
+// Onboarding-overlayet drar inn Tone via audio-unlock → last det klient-only,
+// og bare når det faktisk skal vises (fersk profil).
+const Onboarding = dynamic(() => import('@/components/onboarding/Onboarding').then((m) => m.Onboarding), {
+  ssr: false,
+})
 
 /**
  * The launcher — "velg hva du vil gjøre". Replaces the old 8-block dashboard.
- * Three big ModeCards ARE the app; everything else here is either a one-time
- * explainer or a shortcut back into whatever was last in progress.
+ * Three big ModeCards ARE the app; everything else here is either a shortcut
+ * back into whatever was last in progress or (for a brand-new profile) the
+ * one-time interactive onboarding overlay.
  */
 export default function LauncherPage() {
+  const router = useRouter()
   const [licks, setLicks] = useState<Lick[]>(FALLBACK_LICKS)
   const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {}, lastPracticed: {} })
-  const [showIntro, setShowIntro] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   const sessionKey = useSession((s) => s.key)
@@ -38,14 +50,27 @@ export default function LauncherPage() {
     fetchLicks().then((rows) => {
       if (alive) setLicks(rows)
     })
-    setProgress(getProgress())
+    const prog = getProgress()
+    setProgress(prog)
     loadSession()
     setMounted(true)
+
+    // Onboarding-porten: eksisterende brukere (gammelt intro-flagg ELLER minst
+    // én øvd lick) migreres stille; bare en helt fersk profil ser overlayet.
+    let seenOldIntro = false
     try {
-      if (!localStorage.getItem(SEEN_INTRO_KEY)) setShowIntro(true)
+      seenOldIntro = Boolean(localStorage.getItem(SEEN_INTRO_KEY))
     } catch {
-      /* storage blocked — just skip the banner */
+      /* storage blocked — treat as not seen */
     }
+    const gate = shouldShowOnboarding({
+      onboarded: isOnboarded(),
+      seenOldIntro,
+      practicedCount: prog.practiced.length,
+    })
+    if (gate.migrateSilently) setOnboarded()
+    if (gate.show) setShowOnboarding(true)
+
     // Re-read progress when returning to the tab (e.g. after practicing a lick),
     // so Dagens økt checkmarks + streak reflect what just happened.
     const onFocus = () => setProgress(getProgress())
@@ -55,15 +80,6 @@ export default function LauncherPage() {
       window.removeEventListener('focus', onFocus)
     }
   }, [loadSession])
-
-  function dismissIntro() {
-    setShowIntro(false)
-    try {
-      localStorage.setItem(SEEN_INTRO_KEY, '1')
-    } catch {
-      /* storage blocked — nothing to persist, banner just won't return this session */
-    }
-  }
 
   const lastLick = useMemo(() => {
     const slug = progress.practiced.at(-1)
@@ -100,7 +116,12 @@ export default function LauncherPage() {
   return (
     <AppShell>
       <main className="mx-auto max-w-5xl px-4 py-10 sm:py-14">
-        {showIntro && <IntroBanner onDismiss={dismissIntro} />}
+        {showOnboarding && (
+          <Onboarding
+            onClose={() => setShowOnboarding(false)}
+            onStartBrowsing={() => router.push('/bla')}
+          />
+        )}
 
         <header className="mb-8 sm:mb-10">
           <h1 className="font-display text-3xl text-[var(--color-ivory)] sm:text-4xl">Hva vil du gjøre?</h1>
@@ -154,29 +175,5 @@ export default function LauncherPage() {
         </div>
       </main>
     </AppShell>
-  )
-}
-
-function IntroBanner({ onDismiss }: { onDismiss: () => void }) {
-  return (
-    <div className="animate-fade-in mb-8 flex items-start gap-3 rounded-2xl border border-[var(--color-amber)]/30 bg-[var(--color-amber)]/8 p-4 sm:p-5">
-      <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-[var(--color-amber)]" />
-      <div className="min-w-0 flex-1">
-        <p className="font-display text-base text-[var(--color-ivory)]">Tre måter å bruke SundayLicks på</p>
-        <p className="mt-1 text-sm leading-relaxed text-[var(--color-muted)]">
-          Velg et kort under for å starte — alt du gjør lagres lokalt på denne enheten.
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={onDismiss}
-        aria-label="Lukk forklaringen"
-        className={cn(
-          'grid h-8 w-8 shrink-0 place-items-center rounded-full text-[var(--color-muted)] transition-colors hover:text-[var(--color-ivory)]',
-        )}
-      >
-        <X className="h-4 w-4" />
-      </button>
-    </div>
   )
 }
