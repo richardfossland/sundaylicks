@@ -65,4 +65,11 @@ export const CURATED_PATHS: CuratedPath[] = [
       'Lyden fra feeden din — neo-soul-lommer, golden hour, gospel-runs og looper i reels-format. Korte, lærbare og umiddelbart brukbare.',
     slugs: ['reels-neosoul-am9-loop', 'reels-run-fra-nonen-c', 'reels-goldenhour-arp-c', 'reels-gm9-fill', 'reels-biii-loop-g', 'reels-ending-iv-m6-eb', 'reels-dobbel-run-f'],
   },
+  {
+    id: 'p_gitar_grunnkurs',
+    name: 'Gitar-grunnkurs',
+    description:
+      'Fra åpne grep til gospel-lead: lovsangskomp, sus-farger, Travis-plukk, pentatonboksen og turnarounds — gitarveien inn i biblioteket.',
+    slugs: ['gitar-worship-komp-g', 'gitar-worship-susfarger-g', 'gitar-blues-boks1-am', 'gitar-travis-grunn-c', 'gitar-worship-driv-d', 'gitar-gospel-blueskurve-e', 'gitar-gospel-terser-g'],
+  },
 ]

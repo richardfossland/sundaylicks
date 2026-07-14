@@ -911,6 +911,36 @@ export const GLOSSARY: GlossaryTerm[] = [
     body: 'Pianorullen viser licken som horisontale striper: jo høyere på skjermen, jo lysere tone; jo lengre stripe, jo lengre tone. Et spillehode sveiper over mens licken spilles, og fargene skiller høyre og venstre hånd.\n\nFormatet kommer fra de gamle selvspillende pianoene, der hull i en papirrull styrte tangentene — dagens musikkprogrammer bruker samme idé.\n\nI øvingsvisningen kan du veksle mellom pianorull og tradisjonell notasjon. Bruk gjerne begge: rullen for å SE bevegelsen, notene for å lære å lese.',
     seeAlso: ['midi', 'notenokler'],
   },
+  {
+    id: 'tab',
+    term: 'TAB (tabulatur)',
+    aliases: ['tabulatur', 'tabs'],
+    category: 'notasjon',
+    short:
+      'Gitarnotasjon med seks linjer — én per streng — der tallene viser hvilket bånd du trykker. Leses uten noteforkunnskaper.',
+    body: 'Tabulatur snur notasjonen til gitarens virkelighet: de seks linjene ER strengene (nederste linje = tykkeste streng), og tallet på linjen sier hvilket bånd du trykker. 0 betyr åpen streng.\n\nStyrken er at TAB løser gitarens store tvetydighet: samme tone finnes flere steder på halsen, men TAB sier nøyaktig HVOR du skal spille den. Svakheten er at rytmen vises grovere enn i noter — derfor viser appen TAB og pianorull side om side for gitar-licks.\n\nGitar-licksene i biblioteket lagrer strengvalget per tone, så TAB-en du ser er slik licken faktisk er ment å ligge under fingrene.',
+    seeAlso: ['baand', 'grep'],
+  },
+  {
+    id: 'baand',
+    term: 'Bånd',
+    aliases: ['fret'],
+    category: 'teknikk',
+    short:
+      'Metallribbene på gitarhalsen. Å «spille i 5. bånd» betyr å trykke strengen ned rett bak den femte ribben — hvert bånd hever tonen en halvtone.',
+    body: 'Båndene deler gitarhalsen i halvtonetrinn: hver gang du flytter fingeren ett bånd opp, stiger tonen en halvtone — nøyaktig som å gå én tangent til høyre på pianoet.\n\nDerfor er transponering gitarens superkraft: flytt hele mønsteret to bånd opp, og du har flyttet hele licken en heltone — samme fingre, samme form. Prikk-markørene i 3., 5., 7., 9. og 12. bånd er navigasjonsmerkene; ved 12. bånd er du nøyaktig én oktav over de åpne strengene.\n\nGripebrett-visningen i appen viser båndene liggende, med de samme prikkene som på en ekte hals.',
+    seeAlso: ['tab', 'transponering'],
+  },
+  {
+    id: 'grep',
+    term: 'Grep (akkordgrep)',
+    aliases: ['grepene', 'akkordgrep', 'barré', 'barregrep'],
+    category: 'teknikk',
+    short:
+      'Fingermønsteret som former en akkord på gitarhalsen. Åpne grep bruker løse strenger; barrégrep legger pekefingeren over alle og kan flyttes fritt.',
+    body: 'Et grep er akkorden omsatt til fingre: hvilke strenger som trykkes hvor, hvilke som klinger åpne, og hvilke som dempes. De åpne grepene (G, C, D, Em, Am …) er gitarens grunnvokabular og klinger størst fordi løse strenger ringer med.\n\nBarrégrepet er nøkkelen videre: pekefingeren legges som en kapo over alle strengene, og resten av fingrene former et kjent grep oppå — dermed kan samme form flyttes til hvilken som helst toneart, ett bånd av gangen.\n\nFor gitar-licks med akkorder viser appen grep-diagrammer under øvingsvisningen — foreslått grep for hver akkord i licken, i den tonearten du har valgt.',
+    seeAlso: ['baand', 'voicing'],
+  },
 ]
 
 export const GLOSSARY_BY_ID: ReadonlyMap<string, GlossaryTerm> = new Map(
