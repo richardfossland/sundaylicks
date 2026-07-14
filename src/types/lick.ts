@@ -5,6 +5,11 @@
 
 export type Hand = 'L' | 'R'
 
+/** Hvilket instrument en lick er skrevet for. 'piano' er standard; 'gitar'
+ * krever at hver note bærer en streng `s`. Fritekst på DB-laget (se
+ * 0005_instrument.sql) — denne unionen er appens kjente sett. */
+export type Instrument = 'piano' | 'gitar'
+
 export type Category =
   | 'turnaround'
   | 'two-five-one'
@@ -51,6 +56,10 @@ export interface LickNote {
   d: number // duration, in beats
   h: Hand
   v?: number // velocity 0–1, default 0.8
+  /** Gitar: strengindeks 0–5, 0-basert, 0 = lav E (MIDI 40) … 5 = høy E (64).
+   * Bånd lagres ALDRI — det utledes `f = p − GUITAR_STANDARD[s]` (D1b).
+   * Piano-noter har ALDRI `s`. */
+  s?: number
 }
 
 /** A chord symbol shown in the chord strip and used for backing (later). */
@@ -88,6 +97,9 @@ export interface Lick {
   harmonic_function?: string[]
   /** Defaults to 'lick' — see `mode`. */
   kind?: Kind
+  /** Defaults to 'piano' — optional som `mode` slik at pre-0005-rader og gammel
+   * seed-data fortsatt type-sjekker. Gitar-licks bærer `s` på hver note. */
+  instrument?: Instrument
 }
 
 /** The subset an author writes (DB fills id/status/created_at). */

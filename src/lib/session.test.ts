@@ -11,6 +11,11 @@ describe('parsePersisted', () => {
     expect(parsePersisted(raw)).toEqual({ key: { root: 3, mode: 'minor' }, instrument: 'pad' })
   })
 
+  it('round-tripper gitar-instrumentet (0005_instrument)', () => {
+    const raw = JSON.stringify({ key: { root: 2, mode: 'major' }, instrument: 'gitar' })
+    expect(parsePersisted(raw).instrument).toBe('gitar')
+  })
+
   it('ukjent instrument faller tilbake til piano', () => {
     const raw = JSON.stringify({ key: { root: 0, mode: 'major' }, instrument: 'wurlitzer' })
     expect(parsePersisted(raw).instrument).toBe(DEFAULT_INSTRUMENT)

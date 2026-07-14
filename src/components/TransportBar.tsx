@@ -197,7 +197,9 @@ export function TransportBar(p: Props) {
       {/* Row 4: instrument sound (global — engine follows via AppShell/session) */}
       <div className="flex items-center gap-2">
         <span className="w-16 shrink-0 text-sm text-[var(--color-muted)]">Lyd</span>
-        <div className="flex gap-2">
+        {/* flex-wrap: fire instrument-piller bryter til ny linje på smale skjermer
+            (uten wrap flyter de utenfor og gir horisontal scroll — G1). */}
+        <div className="flex flex-wrap gap-2">
           {INSTRUMENT_ORDER.map((k) => (
             <button
               key={k}
