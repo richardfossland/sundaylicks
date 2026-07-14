@@ -6,9 +6,10 @@
 import { describe, expect, it } from 'vitest'
 import { CURATED_PATHS } from './curated-paths'
 import { SEED_LICKS } from './seed-licks'
+import { SEED_GITAR_LICKS } from './seed-licks-gitar'
 
 describe('CURATED_PATHS-integritet', () => {
-  const known = new Set(SEED_LICKS.map((l) => l.slug))
+  const known = new Set([...SEED_LICKS, ...SEED_GITAR_LICKS].map((l) => l.slug))
 
   it('alle kurs-slugs finnes i SEED_LICKS', () => {
     for (const path of CURATED_PATHS) {
