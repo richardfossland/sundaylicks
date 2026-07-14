@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { GUITAR_STANDARD, MAX_FRET } from './guitar/fretting'
+import { GUITAR_STANDARD, MAX_FRET } from './guitar/fretting.ts'
 
 // Strict validation for lick data at seed / submission time. PLAN §7:
 //   t ≥ 0, d > 0, p in 21–108 (A0–C8), t + d ≤ beats.
