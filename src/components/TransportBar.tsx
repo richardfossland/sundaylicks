@@ -33,6 +33,9 @@ interface Props {
   /** Gitar-variant (D3): rad-etikett «Stemme» + piller Begge/Bass/Melodi. Samme
    * h-id-er ('both'/'L'/'R') — bare etikettene endres. Default (piano) = som før. */
   voiceLabels?: boolean
+  /** Vis hånd/stemme-raden. Default true. Bass er enstemmig (alle noter R) →
+   * raden er inert og skjules (BD7). */
+  showHand?: boolean
 }
 
 const HANDS: { id: HandFilter; label: string }[] = [
@@ -178,33 +181,35 @@ export function TransportBar(p: Props) {
         </button>
       </div>
 
-      {/* Row 3: hand/voice select */}
-      <div className="flex items-center gap-2">
-        <span className="w-16 shrink-0 text-sm text-[var(--color-muted)]">
-          {p.voiceLabels ? 'Stemme' : 'Hånd'}
-        </span>
-        <div className="flex gap-2">
-          {(p.voiceLabels ? VOICES : HANDS).map((h) => (
-            <button
-              key={h.id}
-              onClick={() => p.onHand(h.id)}
-              aria-pressed={p.hand === h.id}
-              className={cn(
-                'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
-                p.hand === h.id
-                  ? h.id === 'R'
-                    ? 'border-[var(--color-amber)] bg-[var(--color-amber)]/15 text-[var(--color-amber)]'
-                    : h.id === 'L'
-                      ? 'border-[var(--color-sea)] bg-[var(--color-sea)]/15 text-[var(--color-sea)]'
-                      : 'border-[var(--color-ivory)] bg-[var(--color-ivory)]/10 text-[var(--color-ivory)]'
-                  : 'border-[var(--color-border)] text-[var(--color-muted)]',
-              )}
-            >
-              {h.label}
-            </button>
-          ))}
+      {/* Row 3: hand/voice select — skjult for enstemmige instrumenter (bass, BD7) */}
+      {p.showHand !== false && (
+        <div className="flex items-center gap-2">
+          <span className="w-16 shrink-0 text-sm text-[var(--color-muted)]">
+            {p.voiceLabels ? 'Stemme' : 'Hånd'}
+          </span>
+          <div className="flex gap-2">
+            {(p.voiceLabels ? VOICES : HANDS).map((h) => (
+              <button
+                key={h.id}
+                onClick={() => p.onHand(h.id)}
+                aria-pressed={p.hand === h.id}
+                className={cn(
+                  'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
+                  p.hand === h.id
+                    ? h.id === 'R'
+                      ? 'border-[var(--color-amber)] bg-[var(--color-amber)]/15 text-[var(--color-amber)]'
+                      : h.id === 'L'
+                        ? 'border-[var(--color-sea)] bg-[var(--color-sea)]/15 text-[var(--color-sea)]'
+                        : 'border-[var(--color-ivory)] bg-[var(--color-ivory)]/10 text-[var(--color-ivory)]'
+                    : 'border-[var(--color-border)] text-[var(--color-muted)]',
+                )}
+              >
+                {h.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Row 4: instrument sound (global — engine follows via AppShell/session) */}
       <div className="flex items-center gap-2">

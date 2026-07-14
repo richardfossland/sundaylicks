@@ -29,8 +29,8 @@ import { cn } from '@/lib/cn'
 type CatFilter = Category | 'all'
 type GenreFilter = Genre | 'all'
 type DiffFilter = Difficulty | 'all'
-/** Instrument-linse (D6): hele biblioteket, kun piano, eller kun gitar. */
-type InstFilter = 'all' | 'piano' | 'gitar'
+/** Instrument-linse (D6): hele biblioteket, eller kun piano/gitar/bass. */
+type InstFilter = 'all' | 'piano' | 'gitar' | 'bass'
 /** Top-level lens: the whole library, or just what the user has collected. */
 type ViewTab = 'all' | 'mine'
 /** Within "Mine lister": favorites, or a specific practice list by id. */
@@ -74,9 +74,15 @@ const INSTS: { key: InstFilter; label: string }[] = [
   { key: 'all', label: 'Alle' },
   { key: 'piano', label: 'Piano' },
   { key: 'gitar', label: 'Gitar' },
+  { key: 'bass', label: 'Bass' },
 ]
 
-const INST_LABEL: Record<InstFilter, string> = { all: 'Alle', piano: 'Piano', gitar: 'Gitar' }
+const INST_LABEL: Record<InstFilter, string> = {
+  all: 'Alle',
+  piano: 'Piano',
+  gitar: 'Gitar',
+  bass: 'Bass',
+}
 
 const SORT_KEYS = SORTS.map((s) => s.key)
 
@@ -93,7 +99,8 @@ function validateOveState(d: Record<string, unknown>): OveViewState | null {
   if (typeof filterOpen !== 'boolean') return null
   // Bakoverkompat (D6): eldre lagrede blober har ikke `inst` — ugyldig/manglende
   // verdi faller stille til 'all' i stedet for å forkaste hele blobben.
-  const instF: InstFilter = inst === 'piano' || inst === 'gitar' ? inst : 'all'
+  const instF: InstFilter =
+    inst === 'piano' || inst === 'gitar' || inst === 'bass' ? inst : 'all'
   return {
     view,
     mineTab,

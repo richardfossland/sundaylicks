@@ -1,14 +1,16 @@
 import type { LickNote } from '@/types/lick'
-import { fretPositions } from './guitar/fretting'
+import { fretPositions, GUITAR_STANDARD } from './guitar/fretting'
 
-// ── Gitar-TAB-bygging (ren, ingen VexFlow, ingen DOM) ────────────────────────
+// ── Fretted-TAB-bygging (ren, ingen VexFlow, ingen DOM) ──────────────────────
 // Speiler notation.ts sin onset-gruppering og varighets-klassifisering, men for
-// gitartabulatur: ÉN stemme som samler alle strenger, posisjoner utledet fra
+// tabulatur: ÉN stemme som samler alle strenger, posisjoner utledet fra
 // fretPositions (D1c — om-fingrer hele licken hvis et bånd faller utenfor 0–15),
-// og VexFlow-strengen `str = 6 − s` (D1: `s` er 0-basert 0 = lav E; VexFlow TAB
-// bruker 1-basert 1 = høy E … 6 = lav E). Denne filen returnerer RENE
-// beskrivelser (TabEvent) slik at den er node-testbar; Tab.tsx bygger VexFlow
-// TabNote/GhostNote/Tuplet av dem ved rendering.
+// og VexFlow-strengen `str = stringCount − s` (D1: `s` er 0-basert 0 = lav
+// streng; VexFlow TAB bruker 1-basert 1 = høy streng … stringCount = lav streng).
+// Parametrisert av stringCount/tuning så både 6-strengs gitar og 4-strengs bass
+// bygges av samme kode. Denne filen returnerer RENE beskrivelser (TabEvent) slik
+// at den er node-testbar; Tab.tsx bygger VexFlow TabNote/GhostNote/Tuplet ved
+// rendering.
 
 const EPS = 1e-6
 const T8 = 1 / 3 // triol-åttendedel
@@ -98,8 +100,10 @@ function groupByOnset(notes: LickNote[]): Group[] {
 export function buildTabNotes(
   notes: LickNote[],
   beats: number,
+  stringCount = 6,
+  tuning: number[] = GUITAR_STANDARD,
 ): { events: TabEvent[]; tuplets: number[][] } {
-  const positions = fretPositions(notes, 0)
+  const positions = fretPositions(notes, 0, tuning)
   const groups = groupByOnset(notes)
   const events: TabEvent[] = []
   const tuplets: number[][] = []
@@ -116,12 +120,13 @@ export function buildTabNotes(
 
   for (const g of groups) {
     if (g.t > cursor + EPS) pushRests(cursor, g.t)
-    // str = 6 − streng (D1). Bruk posisjonens streng, ikke den lagrede `s`, så
-    // en om-fingret note (fretPositions kan bytte streng når båndet sprenger
-    // 0–15) fortsatt har streng og bånd som hører sammen (p = tuning[str] + fret).
+    // str = stringCount − streng (D1). Bruk posisjonens streng, ikke den lagrede
+    // `s`, så en om-fingret note (fretPositions kan bytte streng når båndet
+    // sprenger 0–15) fortsatt har streng og bånd som hører sammen
+    // (p = tuning[str] + fret).
     const positionsForGroup = g.idx
-      .map((i) => ({ str: 6 - positions[i].string, fret: positions[i].fret }))
-      .sort((a, b) => b.str - a.str) // lav streng (str 6 = lav E) → høy streng (str 1)
+      .map((i) => ({ str: stringCount - positions[i].string, fret: positions[i].fret }))
+      .sort((a, b) => b.str - a.str) // lav streng (str = stringCount) → høy streng (str 1)
     const { code, triplet } = classify(g.d)
     const eventIndex = events.length
     events.push({ positions: positionsForGroup, duration: code, triplet, rest: false })

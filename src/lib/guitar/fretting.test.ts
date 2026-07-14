@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest'
 import type { LickNote } from '@/types/lick'
 import {
   GUITAR_STANDARD,
+  BASS_EADG,
   MAX_FRET,
   bestPosition,
   derivedFret,
@@ -134,6 +135,58 @@ describe('assignStrings — forslag ved forfatting', () => {
     const out = assignStrings(notes)
     expect(notes[0].s).toBeUndefined()
     expect(out[0]).not.toBe(notes[0])
+  })
+})
+
+describe('bass — 4-strengs EADG (parametrisert tuning)', () => {
+  it('spiller lav E1 (28) som åpen lav-E-streng', () => {
+    expect(bestPosition(28, BASS_EADG)).toEqual({ string: 0, fret: 0 })
+  })
+
+  it('spiller G2 (43) som åpen G-streng (index 3)', () => {
+    expect(bestPosition(43, BASS_EADG)).toEqual({ string: 3, fret: 0 })
+  })
+
+  it('derivedFret bruker bass-stemmingen (p − BASS_EADG[s])', () => {
+    expect(derivedFret(R(33, 0, 0), BASS_EADG)).toBe(5) // A1 på lav-E-streng = bånd 5
+    expect(derivedFret(R(33, 0, 1), BASS_EADG)).toBe(0) // A1 på åpen A-streng
+    expect(derivedFret(R(43, 0, 3), BASS_EADG)).toBe(0) // G2 åpen
+  })
+
+  it('holder invarianten p+offset = BASS_EADG[s] + f for spillbare offsets', () => {
+    const notes = [R(38, 0, 2), R(43, 1, 3), R(36, 2, 1)] // D2, G2, C2
+    for (const offset of [-3, 0, 4, 7]) {
+      const pos = fretPositions(notes, offset, BASS_EADG)
+      pos.forEach((pp, i) => {
+        expect(BASS_EADG[pp.string] + pp.fret).toBe(notes[i].p + offset)
+        expect(pp.fret).toBeGreaterThanOrEqual(0)
+        expect(pp.fret).toBeLessThanOrEqual(MAX_FRET)
+      })
+    }
+  })
+
+  it('om-fingrer når et utledet bånd sprenger 0–15 på lagret streng', () => {
+    const single = [R(28, 0, 0)] // E1 på lav-E-streng
+    const refingered = fretPositions(single, 20, BASS_EADG) // +20 ⇒ bånd 20 (>15) på streng 0
+    expect(refingered[0].fret).toBeLessThanOrEqual(MAX_FRET)
+    expect(BASS_EADG[refingered[0].string] + refingered[0].fret).toBe(48)
+  })
+
+  it('assignStrings foreslår en gyldig streng mot bass-stemmingen', () => {
+    const notes = [R(28, 0), R(33, 1), R(43, 2)] // E1, A1, G2
+    const out = assignStrings(notes, BASS_EADG)
+    out.forEach((n) => {
+      expect(n.s).toBeTypeOf('number')
+      const f = derivedFret(n, BASS_EADG)
+      expect(f).toBeGreaterThanOrEqual(0)
+      expect(f).toBeLessThanOrEqual(MAX_FRET)
+      expect(BASS_EADG[n.s!] + f).toBe(n.p)
+    })
+  })
+
+  it('gitar-default er uendret når tuning ikke sendes (bakoverkompat)', () => {
+    expect(derivedFret(R(45, 0, 0))).toBe(5) // A2 på lav-E-streng (GUITAR_STANDARD)
+    expect(fretPositions([R(40, 0, 0)], 0)).toEqual([{ string: 0, fret: 0 }])
   })
 })
 

@@ -6,13 +6,14 @@
 import { describe, expect, it } from 'vitest'
 import { SEED_LICKS } from './seed-licks'
 import { SEED_GITAR_LICKS } from './seed-licks-gitar'
+import { SEED_BASS_LICKS } from './seed-licks-bass'
 import { fingerprint, jaccard } from '@/lib/lick-fingerprint'
 
 const NEAR_DUPLICATE = 0.9
 
-// Vakten dekker HELE biblioteket (piano + gitar) — en gitar-lick får ikke være
-// nær-duplikat av en annen gitar- eller piano-lick heller.
-const ALL_LICKS = [...SEED_LICKS, ...SEED_GITAR_LICKS]
+// Vakten dekker HELE biblioteket (piano + gitar + bass) — en bass-lick får ikke
+// være nær-duplikat av en annen bass-, gitar- eller piano-lick heller.
+const ALL_LICKS = [...SEED_LICKS, ...SEED_GITAR_LICKS, ...SEED_BASS_LICKS]
 
 describe('seed-bibliotekets likhets-vakthund', () => {
   it('ingen par av licks er nær-duplikater (Jaccard ≥ 0.9)', () => {

@@ -155,9 +155,10 @@ describe("theory metadata — mode / harmonic_function / kind (0004_theory_metad
   it("all seed licks still validate against seedLickSchema (no new-field regression)", async () => {
     const { SEED_LICKS } = await import("@/data/seed-licks");
     const { SEED_GITAR_LICKS } = await import("@/data/seed-licks-gitar");
-    // Vakten dekker BEGGE korpus — gitar-licks må også passere refineInstrument
-    // (hver note har `s`, utledet bånd i [0,15]).
-    for (const lick of [...SEED_LICKS, ...SEED_GITAR_LICKS]) {
+    const { SEED_BASS_LICKS } = await import("@/data/seed-licks-bass");
+    // Vakten dekker ALLE tre korpus — gitar- og bass-licks må også passere
+    // refineInstrument (hver note har `s`, utledet bånd i [0,15]).
+    for (const lick of [...SEED_LICKS, ...SEED_GITAR_LICKS, ...SEED_BASS_LICKS]) {
       const r = seedLickSchema.safeParse(lick);
       expect(r.success, `slug "${lick.slug}" failed: ${!r.success ? JSON.stringify(r.error.issues) : ""}`).toBe(
         true,
@@ -231,6 +232,56 @@ describe("instrument — piano/gitar-kobling (0005_instrument, refineInstrument)
     ).toBe(false);
     expect(
       seedLickSchema.safeParse({ ...base, slug: "gitar-lick", instrument: "gitar", notes: [{ p: 55, t: 0, d: 1, h: "R", s: 3 }] })
+        .success,
+    ).toBe(true);
+  });
+});
+
+describe("instrument — bass-kobling (4-strengs EADG, tuning-tabell-drevet refineInstrument)", () => {
+  const bassBase = { ...base, instrument: "bass" as const };
+
+  it("aksepterer en bass-lick der hver note har gyldig s (0–3) og utledet bånd i [0,15]", () => {
+    const r = submissionSchema.safeParse({
+      ...bassBase,
+      notes: [
+        { p: 28, t: 0, d: 1, h: "R", s: 0 }, // E1 åpen (lav E-streng)
+        { p: 43, t: 1, d: 1, h: "R", s: 3 }, // G2 åpen (G-streng)
+      ],
+      beats: 4,
+    });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.instrument).toBe("bass");
+  });
+
+  it("avviser en bass-note uten streng (s)", () => {
+    expect(
+      submissionSchema.safeParse({ ...bassBase, notes: [{ p: 28, t: 0, d: 1, h: "R" }] }).success,
+    ).toBe(false);
+  });
+
+  it("avviser bass-note der utledet bånd > 15 (p − BASS_EADG[s])", () => {
+    // p=60 på lav-E-strengen (s=0, E1=28) ⇒ bånd 32 > 15.
+    expect(
+      submissionSchema.safeParse({ ...bassBase, notes: [{ p: 60, t: 0, d: 1, h: "R", s: 0 }] }).success,
+    ).toBe(false);
+  });
+
+  it("avviser s=4/5 for bass (bare 4 strenger, s ∈ 0–3) — noteSchema slipper dem, refineInstrument stopper dem", () => {
+    expect(
+      submissionSchema.safeParse({ ...bassBase, notes: [{ p: 40, t: 0, d: 1, h: "R", s: 4 }] }).success,
+    ).toBe(false);
+    expect(
+      submissionSchema.safeParse({ ...bassBase, notes: [{ p: 40, t: 0, d: 1, h: "R", s: 5 }] }).success,
+    ).toBe(false);
+  });
+
+  it("håndhever bass-koblingen også i seedLickSchema", () => {
+    expect(
+      seedLickSchema.safeParse({ ...base, slug: "bass-lick", instrument: "bass", notes: [{ p: 43, t: 0, d: 1, h: "R" }] })
+        .success,
+    ).toBe(false);
+    expect(
+      seedLickSchema.safeParse({ ...base, slug: "bass-lick", instrument: "bass", notes: [{ p: 43, t: 0, d: 1, h: "R", s: 3 }] })
         .success,
     ).toBe(true);
   });

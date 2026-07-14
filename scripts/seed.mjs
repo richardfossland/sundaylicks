@@ -10,11 +10,13 @@
 import { createClient } from '@supabase/supabase-js'
 import { SEED_LICKS } from '../src/data/seed-licks.ts'
 import { SEED_GITAR_LICKS } from '../src/data/seed-licks-gitar.ts'
+import { SEED_BASS_LICKS } from '../src/data/seed-licks-bass.ts'
 import { seedLickSchema } from '../src/lib/validation.ts'
 
-// Piano-korpuset + gitar-licks (G2+). Gitar-rader trenger `instrument: 'gitar'`-
-// kolonnen fra 0005_instrument.sql — kjør IKKE seed før eier har kjørt migrasjonen.
-const ALL_SEED_LICKS = [...SEED_LICKS, ...SEED_GITAR_LICKS]
+// Piano-korpuset + gitar-licks (G2+) + bass-licks (B1+). Fretted-rader trenger
+// `instrument`-kolonnen fra 0005_instrument.sql (fritekst → 'gitar'/'bass'
+// trenger ingen ny DDL) — kjør IKKE seed før eier har kjørt migrasjonen.
+const ALL_SEED_LICKS = [...SEED_LICKS, ...SEED_GITAR_LICKS, ...SEED_BASS_LICKS]
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY

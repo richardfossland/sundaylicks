@@ -20,6 +20,14 @@ har ingen eksterne kilder.
 - **Lisens:** Creative Commons Attribution 3.0 (CC-BY 3.0).
 - Filnavnene er uendret fra kilden.
 
+## Bass — `bass/` (10 filer, ~3,25 MB, self-hostet)
+
+- **Kilde:** `bass-electric`-settet fra **nbrosowsky/tonejs-instruments**.
+  El-bass-subset E1–G3 (native prøvenett E/G/A#/C#); Tone.Sampler ekstrapolerer
+  opp/ned mellom samplene.
+- **Lisens:** Creative Commons Attribution 3.0 (CC-BY 3.0).
+- Filnavnene er uendret fra kilden.
+
 ## El-piano og Pad
 
 - Syntetisert lokalt i appen (FM-syntese / fatsawtooth-flate). Ingen samples,

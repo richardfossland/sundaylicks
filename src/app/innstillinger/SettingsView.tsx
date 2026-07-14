@@ -276,6 +276,10 @@ export function SettingsView() {
               tonejs-instruments / University of Iowa (CC-BY 3.0), self-hostet i appen.
             </p>
             <p>
+              <span className="text-[var(--color-ivory)]">Bass</span> — el-bass fra
+              tonejs-instruments (bass-electric, CC-BY 3.0), self-hostet i appen.
+            </p>
+            <p>
               <span className="text-[var(--color-ivory)]">El-piano</span> og{' '}
               <span className="text-[var(--color-ivory)]">Pad</span> er syntetisert lokalt i appen —
               ingen samples, ingen eksterne kilder.

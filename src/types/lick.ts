@@ -5,10 +5,10 @@
 
 export type Hand = 'L' | 'R'
 
-/** Hvilket instrument en lick er skrevet for. 'piano' er standard; 'gitar'
- * krever at hver note bærer en streng `s`. Fritekst på DB-laget (se
- * 0005_instrument.sql) — denne unionen er appens kjente sett. */
-export type Instrument = 'piano' | 'gitar'
+/** Hvilket instrument en lick er skrevet for. 'piano' er standard; 'gitar' og
+ * 'bass' er fretted og krever at hver note bærer en streng `s`. Fritekst på
+ * DB-laget (se 0005_instrument.sql) — denne unionen er appens kjente sett. */
+export type Instrument = 'piano' | 'gitar' | 'bass'
 
 export type Category =
   | 'turnaround'
@@ -56,9 +56,9 @@ export interface LickNote {
   d: number // duration, in beats
   h: Hand
   v?: number // velocity 0–1, default 0.8
-  /** Gitar: strengindeks 0–5, 0-basert, 0 = lav E (MIDI 40) … 5 = høy E (64).
-   * Bånd lagres ALDRI — det utledes `f = p − GUITAR_STANDARD[s]` (D1b).
-   * Piano-noter har ALDRI `s`. */
+  /** Fretted-streng, 0-basert. Gitar: 0–5, 0 = lav E (MIDI 40) … 5 = høy E (64).
+   * Bass: 0–3 mot BASS_EADG, 0 = lav E (MIDI 28) … 3 = G (43). Bånd lagres ALDRI
+   * — det utledes `f = p − tuning[s]` (D1b). Piano-noter har ALDRI `s`. */
   s?: number
 }
 
