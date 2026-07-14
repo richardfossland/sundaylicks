@@ -6,7 +6,7 @@ const instrument = Instrument_Sans({ subsets: ['latin'], variable: '--font-instr
 const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces' })
 
 export const metadata: Metadata = {
-  title: 'SundayLicks — øv gospel-licks på piano og gitar',
+  title: 'SundayLicks — øv gospel-licks på piano, gitar og bass',
   description:
     'Interaktivt bibliotek av gospel- og lovsang-licks for piano. Opplyst klaviatur, live tempo og transponering til alle tonearter.',
 }

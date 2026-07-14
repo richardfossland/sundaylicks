@@ -207,7 +207,7 @@ function StepBody({
           </StepIcon>
           <StepHeading headingRef={headingRef}>Velkommen til SundayLicks</StepHeading>
           <StepLede>
-            Et lite øvingsbibliotek for gospel-, lovsangs- og jazz-piano — og gitar — små, konkrete grep og
+            Et lite øvingsbibliotek for gospel-, lovsangs- og jazz-piano — og gitar og bass — små, konkrete grep og
             fraser du kan lære inn og gjøre til dine egne.
           </StepLede>
           <p className="mt-4 text-[var(--color-muted)]">
