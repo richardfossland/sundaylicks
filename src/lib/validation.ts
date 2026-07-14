@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { GUITAR_STANDARD, MAX_FRET } from './guitar/fretting.ts'
+import { MAX_FRET, TUNING_FOR } from './guitar/fretting.ts'
+import type { Instrument } from '@/types/lick'
 
 // Strict validation for lick data at seed / submission time. PLAN §7:
 //   t ≥ 0, d > 0, p in 21–108 (A0–C8), t + d ≤ beats.
@@ -58,9 +59,9 @@ export const lickContent = z.object({
   // generated shapes (e.g. 'transition'). Free text — see `genre`.
   kind: z.string().min(1).max(24).default('lick'),
   // Instrument (0005_instrument.sql). Standard 'piano' → alle pre-eksisterende
-  // licks (uten feltet) validerer uendret. 'gitar' krever `s` på hver note,
-  // håndhevet av refineInstrument under.
-  instrument: z.enum(['piano', 'gitar']).default('piano'),
+  // licks (uten feltet) validerer uendret. Fretted-instrumenter ('gitar'/'bass')
+  // krever `s` på hver note, håndhevet av refineInstrument under.
+  instrument: z.enum(['piano', 'gitar', 'bass']).default('piano'),
 })
 
 // t + d must stay within `beats`, for both notes and chords.
@@ -88,29 +89,41 @@ const refineWithinBeats = (
   })
 }
 
-// Instrument-koblingen (D1/D1b): gitar-licks MÅ ha `s` på hver note, og det
-// utledede båndet f = p − GUITAR_STANDARD[s] må ligge i [0, 15]. Piano-noter
-// skal ALDRI bære `s`. Zod-refinementet er spillbarhetsgaten for gitar-innhold.
+// Instrument-koblingen (D1/D1b), tuning-tabell-drevet: fretted-licks ('gitar' med
+// 6 strenger, 'bass' med 4) MÅ ha `s` på hver note, `s` må ligge innenfor
+// stemmingens strenger (0..tuning.length−1), og det utledede båndet
+// f = p − tuning[s] må ligge i [0, 15]. Piano-noter skal ALDRI bære `s`.
+// Zod-refinementet er spillbarhetsgaten for alt fretted-innhold.
 const refineInstrument = (
-  lick: { instrument: 'piano' | 'gitar'; notes: { p: number; s?: number }[] },
+  lick: { instrument: Instrument; notes: { p: number; s?: number }[] },
   ctx: z.RefinementCtx,
 ) => {
-  if (lick.instrument === 'gitar') {
+  const tuning = TUNING_FOR[lick.instrument]
+  const fretted = lick.instrument !== 'piano'
+  if (fretted) {
     lick.notes.forEach((n, i) => {
       if (n.s === undefined) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['notes', i, 's'],
-          message: `gitar-note ${i} mangler streng (s)`,
+          message: `${lick.instrument}-note ${i} mangler streng (s)`,
         })
         return
       }
-      const fret = n.p - GUITAR_STANDARD[n.s]
+      if (n.s > tuning.length - 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['notes', i, 's'],
+          message: `${lick.instrument}-note ${i}: streng ${n.s} finnes ikke (${lick.instrument} har ${tuning.length} strenger, s ∈ 0–${tuning.length - 1})`,
+        })
+        return
+      }
+      const fret = n.p - tuning[n.s]
       if (fret < 0 || fret > MAX_FRET) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['notes', i],
-          message: `gitar-note ${i}: utledet bånd ${fret} utenfor 0–${MAX_FRET} (p=${n.p}, s=${n.s})`,
+          message: `${lick.instrument}-note ${i}: utledet bånd ${fret} utenfor 0–${MAX_FRET} (p=${n.p}, s=${n.s})`,
         })
       }
     })

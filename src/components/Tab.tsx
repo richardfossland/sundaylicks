@@ -4,18 +4,23 @@ import { useEffect, useRef, useState } from 'react'
 import { Renderer, TabStave, TabNote, GhostNote, Voice, Formatter, Tuplet } from 'vexflow'
 import type { LickNote } from '@/types/lick'
 import { buildTabNotes } from '@/lib/tab'
+import { BASS_EADG, GUITAR_STANDARD } from '@/lib/guitar/fretting'
 
 const IVORY = '#F3EAD9'
 
 interface Props {
   notes: LickNote[] // transponert, alle strenger
   beats: number
+  /** Antall TAB-linjer: 6 = gitar (default), 4 = bass. Bestemmer num_lines +
+   * hvilken stemming fretPositions bruker (BD5). */
+  strings?: number
 }
 
-// Gitartabulatur via VexFlow: én TabStave, TabNote-er bygget fra de rene
-// TabEvent-beskrivelsene (buildTabNotes), pauser som GhostNote (kun spacing),
-// non-strict stemme. Farger rekolores til scene-elfenben som Notation.tsx.
-export function Tab({ notes, beats }: Props) {
+// Fretted-tabulatur via VexFlow: én TabStave (num_lines = strings), TabNote-er
+// bygget fra de rene TabEvent-beskrivelsene (buildTabNotes), pauser som GhostNote
+// (kun spacing), non-strict stemme. 6-strengs gitar (default) og 4-strengs bass
+// deler samme kode. Farger rekolores til scene-elfenben som Notation.tsx.
+export function Tab({ notes, beats, strings = 6 }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [error, setError] = useState(false)
 
@@ -32,11 +37,12 @@ export function Tab({ notes, beats }: Props) {
       renderer.resize(width, height)
       const ctx = renderer.getContext()
 
+      const tuning = strings === 4 ? BASS_EADG : GUITAR_STANDARD
       const staveW = width - 20
-      const stave = new TabStave(10, 20, staveW).addClef('tab')
+      const stave = new TabStave(10, 20, staveW, { num_lines: strings }).addClef('tab')
       stave.setContext(ctx).draw()
 
-      const { events, tuplets } = buildTabNotes(notes, beats)
+      const { events, tuplets } = buildTabNotes(notes, beats, strings, tuning)
       const tickables = events.map((e) =>
         e.rest ? new GhostNote(e.duration) : new TabNote({ positions: e.positions, duration: e.duration }),
       )
@@ -58,7 +64,7 @@ export function Tab({ notes, beats }: Props) {
     } catch {
       setError(true)
     }
-  }, [notes, beats])
+  }, [notes, beats, strings])
 
   return (
     <div className="scroll-x rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2">

@@ -8,7 +8,9 @@ import { ensureAudioRunning } from './audio-unlock'
 // ── Instrumenter (lazy, cachet per kind) ─────────────────────────────────────
 // 'piano'   — Salamander Grand-samples (hver liten ters, A0–C8) fra Tone-CDN.
 // 'gitar'   — akustisk gitar, self-hostet liten-ters-subset A2–C5 fra
-//             public/samples/gitar/ (CC-BY). Piano og gitar er de eneste med
+//             public/samples/gitar/ (CC-BY).
+// 'bass'    — el-bass, self-hostet subset E1–G3 fra public/samples/bass/ (CC-BY,
+//             tonejs-instruments bass-electric). Piano, gitar og bass er de med
 //             nettverkslast → de eneste som rører isLoading.
 // 'elpiano' — FM-syntetisert elektrisk piano (generisk navn, ingen varemerker).
 // 'pad'     — myk fatsawtooth-flate m/ sakte attack → romklang.
@@ -118,6 +120,29 @@ class PlaybackEngine {
         },
         baseUrl: '/samples/gitar/',
         release: 1,
+      }).toDestination()
+      await Tone.loaded()
+      usePlayer.getState().set({ isLoading: false })
+    } else if (this.kind === 'bass') {
+      // El-bass — self-hostet E1–G3-subset fra public/samples/bass/ (CC-BY,
+      // tonejs-instruments bass-electric; native grid E/G/A#/C#). Nettverkslast
+      // som piano/gitar → rører isLoading; Sampler ekstrapolerer mellom samplene.
+      usePlayer.getState().set({ isLoading: true })
+      node = new Tone.Sampler({
+        urls: {
+          E1: 'E1.mp3',
+          G1: 'G1.mp3',
+          'A#1': 'As1.mp3',
+          'C#2': 'Cs2.mp3',
+          E2: 'E2.mp3',
+          G2: 'G2.mp3',
+          'A#2': 'As2.mp3',
+          'C#3': 'Cs3.mp3',
+          E3: 'E3.mp3',
+          G3: 'G3.mp3',
+        },
+        baseUrl: '/samples/bass/',
+        release: 0.6,
       }).toDestination()
       await Tone.loaded()
       usePlayer.getState().set({ isLoading: false })

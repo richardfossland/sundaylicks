@@ -13,14 +13,16 @@ import {
 } from '@/lib/guitar/fretting'
 import { pitchClass, noteName } from '@/lib/music'
 
-// ── GuitarFretboard — det interaktive gripebrettet (gitar-søskenet til Keyboard) ──
-// Strenger tegnes vannrett (lav E NEDERST, per fretting-geometrien), bånd 0–15 er
-// klikkbare celler: å trykke streng+bånd spiller den tonehøyden gjennom kallerens
-// input-pipeline (motorens gitar-sampler + vent-modus-gating), nøyaktig som å
-// klikke en pianotangent. Aktive avspillingsposisjoner lyser i stemme-farge
-// (melodi/R = amber, bass/L = sea — speiler Keyboard.fillFor); vent-modus-mål har
-// amber-omriss; hit/miss blinker grønt/rødt. Akkordtone-overlegget (D4b) legger
-// prikker på alle bånd 0–12 med en pitch-klasse i akkorden (rot = amber, øvrige = sea).
+// ── Fretboard — det interaktive gripebrettet (fretted-søskenet til Keyboard) ──
+// Parametrisert av `tuning` (default GUITAR_STANDARD): gitar tegner 6 strenger,
+// bass 4 — string-count kommer fra `tuning.length` overalt. Strenger tegnes
+// vannrett (lav streng NEDERST, per fretting-geometrien), bånd 0–15 er klikkbare
+// celler: å trykke streng+bånd spiller den tonehøyden gjennom kallerens
+// input-pipeline (motorens sampler + vent-modus-gating), nøyaktig som å klikke en
+// pianotangent. Aktive avspillingsposisjoner lyser i stemme-farge (melodi/R =
+// amber, bass/L = sea — speiler Keyboard.fillFor); vent-modus-mål har amber-omriss;
+// hit/miss blinker grønt/rødt. Akkordtone-overlegget (D4b) legger prikker på alle
+// bånd 0–12 med en pitch-klasse i akkorden (rot = amber, øvrige = sea).
 
 const FRETS = 15
 const GUTTER = 40 // åpen-streng-stripe til venstre for sadelen (klikk = åpen note)
@@ -37,23 +39,34 @@ interface Props {
   /** Transponert + håndfiltrert (tonene som faktisk spilles), hver med `s`. */
   notes: LickNote[]
   currentBeat: number
+  /** Åpen-streng-stemming, lav→høy. Default GUITAR_STANDARD (6-strengs gitar);
+   * bass sender BASS_EADG (4-strengs). Bestemmer antall strenger og båndoppslag. */
+  tuning?: number[]
   /** Vent-modus: tonehøyder (MIDI) spilleren skal treffe nå (amber-omriss). */
   expected?: Set<number>
   /** Vent-modus: forbigående hit/miss-tilbakemelding per MIDI-tonehøyde. */
   feedback?: Map<number, Feedback>
   /** Akkordtone-overlegg: rot + toner som pitch-klasser (D4b). */
   overlay?: { root: number; tones: Set<number> }
-  /** Spill/rut en note (motorens gitar-sample + vent-modus-input). */
+  /** Spill/rut en note (motorens sample + vent-modus-input). */
   onPress: (midi: number) => void
 }
 
-export function GuitarFretboard({ notes, currentBeat, expected, feedback, overlay, onPress }: Props) {
-  const layout = useMemo(() => fretboardLayout(GUITAR_STANDARD, FRETS, BOARD_W, H), [])
+export function Fretboard({
+  notes,
+  currentBeat,
+  tuning = GUITAR_STANDARD,
+  expected,
+  feedback,
+  overlay,
+  onPress,
+}: Props) {
+  const layout = useMemo(() => fretboardLayout(tuning, FRETS, BOARD_W, H), [tuning])
 
   // Spillbare posisjoner for hele det (allerede transponerte) note-settet. offset
   // 0: fretPositions leser `s` + den transponerte `p` og om-fingrer HELE settet
   // deterministisk hvis et utledet bånd faller utenfor 0–15 (D1c).
-  const positions = useMemo(() => fretPositions(notes, 0), [notes])
+  const positions = useMemo(() => fretPositions(notes, 0, tuning), [notes, tuning])
 
   // Aktive posisjoner ved currentBeat, med stemme (hånd) for fargevalg. Speiler
   // Keyboard: R (melodi) vinner over en overlappende L på samme celle.
@@ -77,11 +90,11 @@ export function GuitarFretboard({ notes, currentBeat, expected, feedback, overla
     for (const midi of expected) {
       const idx = notes.findIndex((n) => n.p === midi)
       const pos: FretPosition | null =
-        idx >= 0 ? positions[idx] : bestPosition(midi, GUITAR_STANDARD, undefined, MAX_FRET)
+        idx >= 0 ? positions[idx] : bestPosition(midi, tuning, undefined, MAX_FRET)
       if (pos) set.add(`${pos.string}:${pos.fret}`)
     }
     return set
-  }, [expected, notes, positions])
+  }, [expected, notes, positions, tuning])
 
   // En celles prikk-senter, i det gutter-forskjøvne koordinatrommet.
   const dotAt = (s: number, f: number) => {
@@ -90,8 +103,8 @@ export function GuitarFretboard({ notes, currentBeat, expected, feedback, overla
   }
 
   const cells: { s: number; f: number; midi: number }[] = []
-  for (let s = 0; s < GUITAR_STANDARD.length; s++) {
-    for (let f = 0; f <= FRETS; f++) cells.push({ s, f, midi: GUITAR_STANDARD[s] + f })
+  for (let s = 0; s < tuning.length; s++) {
+    for (let f = 0; f <= FRETS; f++) cells.push({ s, f, midi: tuning[s] + f })
   }
 
   return (
@@ -105,7 +118,7 @@ export function GuitarFretboard({ notes, currentBeat, expected, feedback, overla
         {/* Sadel + båndlinjer */}
         <line
           x1={GUTTER}
-          y1={layout.stringY[GUITAR_STANDARD.length - 1] - 10}
+          y1={layout.stringY[tuning.length - 1] - 10}
           x2={GUTTER}
           y2={layout.stringY[0] + 10}
           stroke="var(--color-ivory)"
@@ -115,7 +128,7 @@ export function GuitarFretboard({ notes, currentBeat, expected, feedback, overla
           <line
             key={i}
             x1={GUTTER + x}
-            y1={layout.stringY[GUITAR_STANDARD.length - 1] - 8}
+            y1={layout.stringY[tuning.length - 1] - 8}
             x2={GUTTER + x}
             y2={layout.stringY[0] + 8}
             stroke="var(--color-border)"
@@ -150,8 +163,8 @@ export function GuitarFretboard({ notes, currentBeat, expected, feedback, overla
           </text>
         ))}
 
-        {/* Strenger — tykkere mot lav E, med åpen-streng-etiketter */}
-        {GUITAR_STANDARD.map((open, s) => (
+        {/* Strenger — tykkere mot lav streng, med åpen-streng-etiketter */}
+        {tuning.map((open, s) => (
           <g key={s}>
             <line
               x1={GUTTER}
@@ -228,8 +241,7 @@ export function GuitarFretboard({ notes, currentBeat, expected, feedback, overla
         {cells.map(({ s, f, midi }) => {
           const x0 = f === 0 ? 0 : GUTTER + layout.fretX[f - 1]
           const x1 = f === 0 ? GUTTER : GUTTER + layout.fretX[f]
-          const rowH =
-            GUITAR_STANDARD.length > 1 ? Math.abs(layout.stringY[0] - layout.stringY[1]) : H
+          const rowH = tuning.length > 1 ? Math.abs(layout.stringY[0] - layout.stringY[1]) : H
           return (
             <rect
               key={`hit-${s}:${f}`}

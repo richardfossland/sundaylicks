@@ -12,10 +12,22 @@
 // utledes alltid som `f = p − GUITAR_STANDARD[s]` (D1b) og kan derfor aldri bli
 // inkonsistent med tonehøyden.
 
-import type { LickNote } from '@/types/lick'
+import type { LickNote, Instrument } from '@/types/lick'
 
 /** Åpen-streng MIDI-tonehøyder, lav→høy. Index 0 er lav E (tegnes nederst). */
 export const GUITAR_STANDARD = [40, 45, 50, 55, 59, 64] // E2, A2, D3, G3, B3, E4
+
+/** Bass i 4-strengs standardstemming EADG, lav→høy. Index 0 er lav E (MIDI 28). */
+export const BASS_EADG = [28, 33, 38, 43] // E1, A1, D2, G2
+
+/** Data-drevet oppslag fra instrument → stemming. Piano har ingen strenger (tom
+ * tuning); gitar og bass er de to fretted-instrumentene. Brukes av visnings- og
+ * validerings-laget slik at nye fretted-instrumenter bare trenger en linje her. */
+export const TUNING_FOR: Record<Instrument, number[]> = {
+  piano: [],
+  gitar: GUITAR_STANDARD,
+  bass: BASS_EADG,
+}
 
 /** Hvor mange bånd `bestPosition` vurderer som standard (en 24-bånds hals). */
 export const DEFAULT_FRET_COUNT = 24
@@ -143,14 +155,15 @@ export function bestPosition(
 }
 
 /**
- * Utledet bånd for en note, gitt dens lagrede streng (D1b). Krever at noten har
- * `s` — kall dette kun på gitarnoter (piano-noter har aldri `s`).
+ * Utledet bånd for en note, gitt dens lagrede streng (D1b) og `tuning` (default
+ * GUITAR_STANDARD — bakoverkompat for alle gitar-kallere). Krever at noten har
+ * `s` — kall dette kun på fretted-noter (piano-noter har aldri `s`).
  */
-export function derivedFret(n: LickNote): number {
+export function derivedFret(n: LickNote, tuning: number[] = GUITAR_STANDARD): number {
   if (n.s === undefined) {
-    throw new Error('derivedFret: noten mangler streng (s) — kun gitarnoter har utledet bånd')
+    throw new Error('derivedFret: noten mangler streng (s) — kun fretted-noter har utledet bånd')
   }
-  return n.p - GUITAR_STANDARD[n.s]
+  return n.p - tuning[n.s]
 }
 
 /**
@@ -166,7 +179,11 @@ export function derivedFret(n: LickNote): number {
  *     tonehøydene (kontinuitet fra note til note), så ingenting havner utenfor
  *     halsen. Alt-eller-ingenting unngår at halve licken hopper streng.
  */
-export function fretPositions(notes: LickNote[], offset: number): FretPosition[] {
+export function fretPositions(
+  notes: LickNote[],
+  offset: number,
+  tuning: number[] = GUITAR_STANDARD,
+): FretPosition[] {
   // Forsøk 1: behold lagret streng, bare skyv båndet med offset.
   const kept: FretPosition[] = []
   let allInRange = true
@@ -175,7 +192,7 @@ export function fretPositions(notes: LickNote[], offset: number): FretPosition[]
       allInRange = false
       break
     }
-    const fret = n.p + offset - GUITAR_STANDARD[n.s]
+    const fret = n.p + offset - tuning[n.s]
     if (fret < 0 || fret > MAX_FRET) {
       allInRange = false
       break
@@ -189,16 +206,16 @@ export function fretPositions(notes: LickNote[], offset: number): FretPosition[]
   let prev: FretPosition | undefined
   for (const n of notes) {
     const pitch = n.p + offset
-    const pos = bestPosition(pitch, GUITAR_STANDARD, prev, MAX_FRET)
+    const pos = bestPosition(pitch, tuning, prev, MAX_FRET)
     if (pos) {
       refingered.push(pos)
       prev = pos
     } else {
       // Utenfor halsen selv etter om-fingring: klem båndet inn på nærmeste
       // streng slik at invarianten (p = tuning[s] + f) fortsatt kan holde ved
-      // rendering. Ekstremt sjeldent for reelt gitar-innhold.
+      // rendering. Ekstremt sjeldent for reelt fretted-innhold.
       const s = n.s ?? 0
-      refingered.push({ string: s, fret: Math.max(0, Math.min(MAX_FRET, pitch - GUITAR_STANDARD[s])) })
+      refingered.push({ string: s, fret: Math.max(0, Math.min(MAX_FRET, pitch - tuning[s])) })
     }
   }
   return refingered
@@ -210,14 +227,14 @@ export function fretPositions(notes: LickNote[], offset: number): FretPosition[]
  * ikke drar hverandre ut av posisjon. Returnerer NYE noter med `s` satt;
  * inn-notene røres ikke. Forfatteren hånd-justerer forslaget etterpå.
  */
-export function assignStrings(notes: LickNote[]): LickNote[] {
+export function assignStrings(notes: LickNote[], tuning: number[] = GUITAR_STANDARD): LickNote[] {
   const prevByHand: Partial<Record<LickNote['h'], FretPosition | undefined>> = {}
   // Behold original rekkefølge, men kjed kontinuitet i tidsrekkefølge per hånd.
   const order = notes.map((n, i) => i).sort((a, b) => notes[a].t - notes[b].t)
   const assigned = new Array<number | undefined>(notes.length)
   for (const i of order) {
     const n = notes[i]
-    const pos = bestPosition(n.p, GUITAR_STANDARD, prevByHand[n.h], MAX_FRET)
+    const pos = bestPosition(n.p, tuning, prevByHand[n.h], MAX_FRET)
     if (pos) {
       assigned[i] = pos.string
       prevByHand[n.h] = pos

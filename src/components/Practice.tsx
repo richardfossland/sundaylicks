@@ -37,8 +37,9 @@ import { useWaitMode } from '@/lib/useWaitMode'
 import { connectMidi, midiSupported, type MidiConnection } from '@/lib/midi'
 import { cn } from '@/lib/cn'
 import { useSession } from '@/lib/session'
+import { BASS_EADG, GUITAR_STANDARD } from '@/lib/guitar/fretting'
 import { Keyboard } from './Keyboard'
-import { GuitarFretboard } from './GuitarFretboard'
+import { Fretboard } from './Fretboard'
 import { PianoRoll } from './PianoRoll'
 import { Notation } from './NotationLazy'
 import { Tab } from './TabLazy'
@@ -73,14 +74,18 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
   const [bpm, setBpm] = useState(80)
   const [hand, setHand] = useState<HandFilter>('both')
   const [loop, setLoop] = useState(true)
-  const [view, setView] = useState<View>((lickProp?.instrument ?? 'piano') === 'gitar' ? 'tab' : 'roll')
-  // Side-lokal lyd (D5b): IKKE persistert. Init = gitar-lick → 'gitar', ellers
-  // det globale session-instrumentet. En effekt speiler den inn i motoren og
-  // gjenoppretter session-lyden når man forlater siden. /innstillinger forblir
-  // global default; her overstyrer vi bare for denne licken.
-  const [pageInstrument, setPageInstrument] = useState<InstrumentKind>(() =>
-    (lickProp?.instrument ?? 'piano') === 'gitar' ? 'gitar' : useSession.getState().instrument,
+  const [view, setView] = useState<View>(
+    (lickProp?.instrument ?? 'piano') !== 'piano' ? 'tab' : 'roll',
   )
+  // Side-lokal lyd (D5b): IKKE persistert. Init = fretted-lick → sitt eget
+  // instrument (gitar/bass), ellers det globale session-instrumentet. En effekt
+  // speiler den inn i motoren og gjenoppretter session-lyden når man forlater
+  // siden. /innstillinger forblir global default; her overstyrer vi bare for
+  // denne licken.
+  const [pageInstrument, setPageInstrument] = useState<InstrumentKind>(() => {
+    const inst = lickProp?.instrument ?? 'piano'
+    return inst === 'gitar' ? 'gitar' : inst === 'bass' ? 'bass' : useSession.getState().instrument
+  })
   const [showOverlay, setShowOverlay] = useState(false)
   const [copied, setCopied] = useState(false)
   const [ramp, setRamp] = useState(false)
@@ -143,9 +148,12 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
               : null,
       )
       setLick(l)
-      const isGitar = (l.instrument ?? 'piano') === 'gitar'
-      setView(isGitar ? 'tab' : 'roll')
-      setPageInstrument(isGitar ? 'gitar' : useSession.getState().instrument)
+      const inst = l.instrument ?? 'piano'
+      const isFretted = inst !== 'piano'
+      setView(isFretted ? 'tab' : 'roll')
+      setPageInstrument(
+        inst === 'gitar' ? 'gitar' : inst === 'bass' ? 'bass' : useSession.getState().instrument,
+      )
       setTargetKey(share.key ?? l.original_key)
       setBpm(share.bpm ?? l.default_bpm)
       setLoopB(l.beats)
@@ -314,9 +322,12 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
     return <main className="mx-auto max-w-md px-4 py-24 text-center text-[var(--color-muted)]">Laster …</main>
   }
 
-  // Gitar-lick? Styrer hero-bytte (gripebrett↔klaviatur), view-toggle (TAB|Rull),
-  // Grep-panel, stemme-labels og øvemodus-copy (D3/D4/D6).
+  // Fretted-lick? Styrer hero-bytte (gripebrett↔klaviatur), view-toggle (TAB|Rull)
+  // og øvemodus-copy (D3/D4/D6/BD8). `gitar` beholdes for det gitar-spesifikke
+  // (Grep-panel + stemme-labels); `bass` er 4-strengs og enstemmig (BD6/BD7).
   const gitar = (lick.instrument ?? 'piano') === 'gitar'
+  const bass = (lick.instrument ?? 'piano') === 'bass'
+  const fretted = gitar || bass
 
   const onPlayToggle = () => {
     const engine = getEngine()
@@ -449,9 +460,10 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
       </header>
 
       <div className="flex flex-col gap-4">
-        {gitar ? (
-          <GuitarFretboard
+        {fretted ? (
+          <Fretboard
             notes={notesForKeyboard}
+            tuning={bass ? BASS_EADG : GUITAR_STANDARD}
             currentBeat={practiceOn ? -1 : isPlaying ? currentBeat : 0}
             expected={practiceOn ? waitMode.expected : undefined}
             feedback={practiceOn ? waitMode.feedback : undefined}
@@ -473,9 +485,9 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
         {/* Grep-panel (D7) — kun for gitar-licks med akkorder */}
         {gitar && chords.length > 0 && <GrepPanel chords={chords} />}
 
-        {/* Primær: view-veksling — gitar: TAB|Rull, piano: Pianorull|Noter */}
+        {/* Primær: view-veksling — fretted: TAB|Rull, piano: Pianorull|Noter */}
         <div className="flex gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-1 self-start">
-          {gitar ? (
+          {fretted ? (
             <>
               <ViewTab active={view === 'tab'} onClick={() => setView('tab')} icon={<Guitar className="h-4 w-4" />}>
                 TAB
@@ -497,7 +509,7 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
         </div>
 
         {view === 'tab' ? (
-          <Tab notes={notesAll} beats={lick.beats} />
+          <Tab notes={notesAll} beats={lick.beats} strings={bass ? 4 : 6} />
         ) : view === 'roll' ? (
           <PianoRoll
             notes={notesAll}
@@ -535,6 +547,7 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
           instrument={pageInstrument}
           onInstrument={setPageInstrument}
           voiceLabels={gitar}
+          showHand={!bass}
         />
 
         {/* Øvemodus (vent-modus): surfaced here as a first-class chip so it's
@@ -670,21 +683,24 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
                     >
                       <Piano className="h-4 w-4" /> Øvemodus (vent-modus)
                     </button>
-                    <button
-                      onClick={() => {
-                        setBandMode((v) => !v)
-                        if (!bandMode) setPracticeOn(false)
-                      }}
-                      aria-pressed={bandMode}
-                      className={cn(
-                        'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
-                        bandMode
-                          ? 'border-[var(--color-sea)] bg-[var(--color-sea)]/15 text-[var(--color-sea)]'
-                          : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ivory)]',
-                      )}
-                    >
-                      <Users className="h-4 w-4" /> Band-modus
-                    </button>
+                    {/* Band-modus krever to stemmer — skjult for bass (enstemmig, BD7). */}
+                    {!bass && (
+                      <button
+                        onClick={() => {
+                          setBandMode((v) => !v)
+                          if (!bandMode) setPracticeOn(false)
+                        }}
+                        aria-pressed={bandMode}
+                        className={cn(
+                          'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                          bandMode
+                            ? 'border-[var(--color-sea)] bg-[var(--color-sea)]/15 text-[var(--color-sea)]'
+                            : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ivory)]',
+                        )}
+                      >
+                        <Users className="h-4 w-4" /> Band-modus
+                      </button>
+                    )}
                     {bandMode && (
                       <button
                         onClick={() => setBackingHand((h) => (h === 'L' ? 'R' : 'L'))}
@@ -720,7 +736,7 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
                 {practiceOn && (
                   <p className="mt-3 text-sm text-[var(--color-muted)]">
                     Spill de <span className="text-[var(--color-amber)]">markerte</span>{' '}
-                    {gitar ? 'båndene' : 'tangentene'} i rekkefølge
+                    {fretted ? 'båndene' : 'tangentene'} i rekkefølge
                     {waitMode.total > 0 && (
                       <>
                         {' — '}
