@@ -12,6 +12,7 @@ import {
   derivedFret,
   fretPositions,
   assignStrings,
+  fretboardLayout,
 } from './fretting'
 
 const R = (p: number, t: number, s?: number): LickNote => ({ p, t, d: 0.5, h: 'R', s })
@@ -133,5 +134,37 @@ describe('assignStrings — forslag ved forfatting', () => {
     const out = assignStrings(notes)
     expect(notes[0].s).toBeUndefined()
     expect(out[0]).not.toBe(notes[0])
+  })
+})
+
+describe('fretboardLayout — skjematisk plassering', () => {
+  const W = 720
+  const H = 200
+  const layout = fretboardLayout(GUITAR_STANDARD, 15, W, H)
+
+  it('gir én y per streng og fretCount+1 båndlinjer', () => {
+    expect(layout.stringY).toHaveLength(6)
+    expect(layout.fretX).toHaveLength(16) // 0..15
+  })
+
+  it('tegner den lave strengen (index 0) nederst (størst y)', () => {
+    expect(layout.stringY[0]).toBeGreaterThan(layout.stringY[5])
+  })
+
+  it('sadelen (fret 0) ligger på venstre kant, siste bånd på høyre kant', () => {
+    expect(layout.fretX[0]).toBe(0)
+    expect(layout.fretX[15]).toBeCloseTo(W)
+  })
+
+  it('posOf: åpen note ligger på sadelen, grepet note sentreres mellom båndlinjer', () => {
+    expect(layout.posOf(0, 0).x).toBe(layout.fretX[0])
+    expect(layout.posOf(0, 3).x).toBeCloseTo((layout.fretX[2] + layout.fretX[3]) / 2)
+    expect(layout.posOf(2, 5).y).toBe(layout.stringY[2])
+  })
+
+  it('klemmer streng/bånd utenfor området inn i gyldig rekkevidde', () => {
+    expect(layout.posOf(-1, 0).y).toBe(layout.stringY[0])
+    expect(layout.posOf(99, 0).y).toBe(layout.stringY[5])
+    expect(layout.posOf(0, 99).x).toBeCloseTo((layout.fretX[14] + layout.fretX[15]) / 2)
   })
 })

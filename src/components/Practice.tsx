@@ -17,8 +17,10 @@ import {
   Users,
   Repeat,
   SlidersHorizontal,
+  Guitar,
 } from 'lucide-react'
 import type { Lick, HandFilter } from '@/types/lick'
+import type { InstrumentKind } from '@/lib/instruments'
 import { fetchLick } from '@/lib/licks'
 import { transposedNotes, transposedChords } from '@/lib/transpose'
 import { getEngine } from '@/lib/playback'
@@ -36,9 +38,12 @@ import { connectMidi, midiSupported, type MidiConnection } from '@/lib/midi'
 import { cn } from '@/lib/cn'
 import { useSession } from '@/lib/session'
 import { Keyboard } from './Keyboard'
+import { GuitarFretboard } from './GuitarFretboard'
 import { PianoRoll } from './PianoRoll'
 import { Notation } from './NotationLazy'
+import { Tab } from './TabLazy'
 import { ChordStrip } from './ChordStrip'
+import { GrepPanel } from './GrepPanel'
 import { TransportBar } from './TransportBar'
 import { DifficultyBadge } from './DifficultyBadge'
 import { FavoriteButton } from './FavoriteButton'
@@ -46,7 +51,7 @@ import { AddToListButton } from './AddToListButton'
 import { ExportButton } from './ExportButton'
 import { GlossaryText } from './glossary/GlossaryText'
 
-type View = 'roll' | 'notation'
+type View = 'roll' | 'notation' | 'tab'
 
 interface PracticeProps {
   /** Slug of a published/fallback lick to fetch. Ignored when `lick` is given. */
@@ -68,10 +73,14 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
   const [bpm, setBpm] = useState(80)
   const [hand, setHand] = useState<HandFilter>('both')
   const [loop, setLoop] = useState(true)
-  const [view, setView] = useState<View>('roll')
-  // Global lyd-preferanse (AppShell speiler den inn i motoren — se AppShell.tsx)
-  const instrument = useSession((s) => s.instrument)
-  const setInstrument = useSession((s) => s.setInstrument)
+  const [view, setView] = useState<View>((lickProp?.instrument ?? 'piano') === 'gitar' ? 'tab' : 'roll')
+  // Side-lokal lyd (D5b): IKKE persistert. Init = gitar-lick → 'gitar', ellers
+  // det globale session-instrumentet. En effekt speiler den inn i motoren og
+  // gjenoppretter session-lyden når man forlater siden. /innstillinger forblir
+  // global default; her overstyrer vi bare for denne licken.
+  const [pageInstrument, setPageInstrument] = useState<InstrumentKind>(() =>
+    (lickProp?.instrument ?? 'piano') === 'gitar' ? 'gitar' : useSession.getState().instrument,
+  )
   const [showOverlay, setShowOverlay] = useState(false)
   const [copied, setCopied] = useState(false)
   const [ramp, setRamp] = useState(false)
@@ -134,6 +143,9 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
               : null,
       )
       setLick(l)
+      const isGitar = (l.instrument ?? 'piano') === 'gitar'
+      setView(isGitar ? 'tab' : 'roll')
+      setPageInstrument(isGitar ? 'gitar' : useSession.getState().instrument)
       setTargetKey(share.key ?? l.original_key)
       setBpm(share.bpm ?? l.default_bpm)
       setLoopB(l.beats)
@@ -200,6 +212,17 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
   useEffect(() => {
     getEngine().setLoopRange(abLoop ? loopA : null, abLoop ? loopB : null)
   }, [abLoop, loopA, loopB])
+
+  // Side-lokal lyd (D5b): speil pageInstrument inn i motoren mens siden lever,
+  // og gjenopprett det globale session-instrumentet ved unmount (cleanup) — så
+  // et gitar-lick spiller gitar automatisk uten å endre brukerens globale valg.
+  useEffect(() => {
+    const engine = getEngine()
+    engine.setInstrument(pageInstrument)
+    return () => {
+      engine.setInstrument(useSession.getState().instrument)
+    }
+  }, [pageInstrument])
 
   const notesForKeyboard = useMemo(
     () =>
@@ -290,6 +313,10 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
   if (!lick) {
     return <main className="mx-auto max-w-md px-4 py-24 text-center text-[var(--color-muted)]">Laster …</main>
   }
+
+  // Gitar-lick? Styrer hero-bytte (gripebrett↔klaviatur), view-toggle (TAB|Rull),
+  // Grep-panel, stemme-labels og øvemodus-copy (D3/D4/D6).
+  const gitar = (lick.instrument ?? 'piano') === 'gitar'
 
   const onPlayToggle = () => {
     const engine = getEngine()
@@ -422,27 +449,56 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
       </header>
 
       <div className="flex flex-col gap-4">
-        <Keyboard
-          notes={notesForKeyboard}
-          currentBeat={practiceOn ? -1 : isPlaying ? currentBeat : 0}
-          expected={practiceOn ? waitMode.expected : undefined}
-          feedback={practiceOn ? waitMode.feedback : undefined}
-          overlay={overlay}
-          onKeyPress={(m) => inputRef.current(m)}
-        />
+        {gitar ? (
+          <GuitarFretboard
+            notes={notesForKeyboard}
+            currentBeat={practiceOn ? -1 : isPlaying ? currentBeat : 0}
+            expected={practiceOn ? waitMode.expected : undefined}
+            feedback={practiceOn ? waitMode.feedback : undefined}
+            overlay={overlay}
+            onPress={(m) => inputRef.current(m)}
+          />
+        ) : (
+          <Keyboard
+            notes={notesForKeyboard}
+            currentBeat={practiceOn ? -1 : isPlaying ? currentBeat : 0}
+            expected={practiceOn ? waitMode.expected : undefined}
+            feedback={practiceOn ? waitMode.feedback : undefined}
+            overlay={overlay}
+            onKeyPress={(m) => inputRef.current(m)}
+          />
+        )}
         <ChordStrip chords={chords} beats={lick.beats} currentBeat={practiceOn ? -1 : currentBeat} />
 
-        {/* Primær: notasjon/pianorull-veksling */}
+        {/* Grep-panel (D7) — kun for gitar-licks med akkorder */}
+        {gitar && chords.length > 0 && <GrepPanel chords={chords} />}
+
+        {/* Primær: view-veksling — gitar: TAB|Rull, piano: Pianorull|Noter */}
         <div className="flex gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-1 self-start">
-          <ViewTab active={view === 'roll'} onClick={() => setView('roll')} icon={<BarChart3 className="h-4 w-4" />}>
-            Pianorull
-          </ViewTab>
-          <ViewTab active={view === 'notation'} onClick={() => setView('notation')} icon={<Music className="h-4 w-4" />}>
-            Noter
-          </ViewTab>
+          {gitar ? (
+            <>
+              <ViewTab active={view === 'tab'} onClick={() => setView('tab')} icon={<Guitar className="h-4 w-4" />}>
+                TAB
+              </ViewTab>
+              <ViewTab active={view === 'roll'} onClick={() => setView('roll')} icon={<BarChart3 className="h-4 w-4" />}>
+                Rull
+              </ViewTab>
+            </>
+          ) : (
+            <>
+              <ViewTab active={view === 'roll'} onClick={() => setView('roll')} icon={<BarChart3 className="h-4 w-4" />}>
+                Pianorull
+              </ViewTab>
+              <ViewTab active={view === 'notation'} onClick={() => setView('notation')} icon={<Music className="h-4 w-4" />}>
+                Noter
+              </ViewTab>
+            </>
+          )}
         </div>
 
-        {view === 'roll' ? (
+        {view === 'tab' ? (
+          <Tab notes={notesAll} beats={lick.beats} />
+        ) : view === 'roll' ? (
           <PianoRoll
             notes={notesAll}
             hand={playbackHand}
@@ -476,8 +532,9 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
           onKey={setTargetKey}
           hand={hand}
           onHand={setHand}
-          instrument={instrument}
-          onInstrument={setInstrument}
+          instrument={pageInstrument}
+          onInstrument={setPageInstrument}
+          voiceLabels={gitar}
         />
 
         {/* Øvemodus (vent-modus): surfaced here as a first-class chip so it's
@@ -633,7 +690,9 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
                         onClick={() => setBackingHand((h) => (h === 'L' ? 'R' : 'L'))}
                         className="rounded-full border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] hover:text-[var(--color-ivory)]"
                       >
-                        App spiller: {backingHand === 'L' ? 'venstre' : 'høyre'} hånd
+                        {gitar
+                          ? `App spiller: ${backingHand === 'L' ? 'bass' : 'melodi'}`
+                          : `App spiller: ${backingHand === 'L' ? 'venstre' : 'høyre'} hånd`}
                       </button>
                     )}
                   </div>
@@ -660,7 +719,8 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
 
                 {practiceOn && (
                   <p className="mt-3 text-sm text-[var(--color-muted)]">
-                    Spill de <span className="text-[var(--color-amber)]">markerte</span> tangentene i rekkefølge
+                    Spill de <span className="text-[var(--color-amber)]">markerte</span>{' '}
+                    {gitar ? 'båndene' : 'tangentene'} i rekkefølge
                     {waitMode.total > 0 && (
                       <>
                         {' — '}

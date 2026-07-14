@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Check, ArrowLeftRight } from 'lucide-react'
+import { Check, ArrowLeftRight, Guitar } from 'lucide-react'
 import type { Lick } from '@/types/lick'
 import { CATEGORY_LABEL, GENRE_LABEL } from '@/lib/labels'
 import { KEY_NAMES } from '@/lib/music'
@@ -43,6 +43,11 @@ export function LickCard({
         </h3>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <FavoriteButton slug={lick.slug} stopNav className="-mr-1 -mt-1" />
+          {lick.instrument === 'gitar' && (
+            <span className="flex items-center gap-1 rounded-full border border-[var(--color-amber)]/50 bg-[var(--color-raised)] px-2.5 py-0.5 text-xs font-medium text-[var(--color-amber)] shadow-sm">
+              <Guitar className="h-3 w-3" /> Gitar
+            </span>
+          )}
           <span className="rounded-full border border-[var(--color-amber)]/40 bg-[var(--color-amber)]/10 px-2.5 py-0.5 text-xs text-[var(--color-amber)]">
             {GENRE_LABEL[lick.genre]}
           </span>

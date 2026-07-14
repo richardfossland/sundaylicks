@@ -30,12 +30,22 @@ interface Props {
   onHand: (h: HandFilter) => void
   instrument: InstrumentKind
   onInstrument: (k: InstrumentKind) => void
+  /** Gitar-variant (D3): rad-etikett «Stemme» + piller Begge/Bass/Melodi. Samme
+   * h-id-er ('both'/'L'/'R') — bare etikettene endres. Default (piano) = som før. */
+  voiceLabels?: boolean
 }
 
 const HANDS: { id: HandFilter; label: string }[] = [
   { id: 'both', label: 'Begge' },
   { id: 'L', label: 'Venstre' },
   { id: 'R', label: 'Høyre' },
+]
+
+// Gitar-semantikk (D3): venstre = bass/tommel, høyre = melodi/plukk.
+const VOICES: { id: HandFilter; label: string }[] = [
+  { id: 'both', label: 'Begge' },
+  { id: 'L', label: 'Bass' },
+  { id: 'R', label: 'Melodi' },
 ]
 
 export function TransportBar(p: Props) {
@@ -168,11 +178,13 @@ export function TransportBar(p: Props) {
         </button>
       </div>
 
-      {/* Row 3: hand select */}
+      {/* Row 3: hand/voice select */}
       <div className="flex items-center gap-2">
-        <span className="w-16 shrink-0 text-sm text-[var(--color-muted)]">Hånd</span>
+        <span className="w-16 shrink-0 text-sm text-[var(--color-muted)]">
+          {p.voiceLabels ? 'Stemme' : 'Hånd'}
+        </span>
         <div className="flex gap-2">
-          {HANDS.map((h) => (
+          {(p.voiceLabels ? VOICES : HANDS).map((h) => (
             <button
               key={h.id}
               onClick={() => p.onHand(h.id)}

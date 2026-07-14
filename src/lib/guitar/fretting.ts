@@ -28,6 +28,69 @@ export interface FretPosition {
   fret: number // 0 = åpen streng
 }
 
+// ── Skjematisk gripebrett-layout (G2) ────────────────────────────────────────
+// Sannhetskilde for HVOR hver streng + bånd sitter i piksel-rommet, slik at både
+// den interaktive GuitarFretboard og (senere) statiske diagrammer er enige.
+// Portet fra SundaySchools fretboard-geometry (layout-halvdelen). Fortsatt
+// DOM-fri: bare tall inn, tall ut. Konvensjon (dokumentert så renderer og brett
+// er enige):
+//   • Strenger tegnes som VANNRETTE rader. Den LAVE strengen (index 0, lav E)
+//     sitter NEDERST — slik en gitar/bass henger og slik TAB leses. Derfor er
+//     stringY SYNKENDE i index (stringY[0] er størst y, siste streng minst).
+//   • Bånd fordeles LINEÆRT over bredden. Ekte bånd krymper logaritmisk mot
+//     kroppen, men for et kompakt skjermdiagram bærer båndNUMMERET meningen, og
+//     jevn avstand holder hvert bånd bredt nok til å treffe på en telefon.
+//     fretX[0] er sadelen (åpen), fretX[fretCount] ytterkanten.
+
+export interface FretboardLayout {
+  /** y (px) for hver strengs midtlinje, indeksert av streng. Synkende: den lave
+   * strengen (index 0) er nederst (størst y). */
+  stringY: number[]
+  /** x (px) for hver båndlinje, index 0..fretCount (0 = sadel). */
+  fretX: number[]
+  /** Skjermposisjon for streng+bånd. Bånd 0 ligger på sadelen; et grepet bånd
+   * (bånd ≥ 1) sentreres mellom sine to båndlinjer, der en finger presser. */
+  posOf(stringIdx: number, fret: number): { x: number; y: number }
+}
+
+/**
+ * Legg ut `tuning.length` vannrette strenger og `fretCount` lineært fordelte
+ * bånd i en widthPx × heightPx-boks. Strengene fordeles jevnt med et lite loddrett
+ * innhogg så topp/bunn-strengen ikke ligger helt inntil kanten.
+ */
+export function fretboardLayout(
+  tuning: number[],
+  fretCount: number,
+  widthPx: number,
+  heightPx: number,
+): FretboardLayout {
+  const n = Math.max(1, tuning.length)
+  const frets = Math.max(1, fretCount)
+
+  // Jevne strengrader med 12 % innhogg topp+bunn; index 0 (lav) nederst.
+  const inset = heightPx * 0.12
+  const usable = heightPx - inset * 2
+  const gap = n > 1 ? usable / (n - 1) : 0
+  const stringY: number[] = []
+  for (let i = 0; i < n; i++) {
+    // i = 0 → nederst (størst y); i = n-1 → øverst (minst y).
+    stringY.push(heightPx - inset - i * gap)
+  }
+
+  const fretX: number[] = []
+  for (let f = 0; f <= frets; f++) fretX.push((f / frets) * widthPx)
+
+  const posOf = (stringIdx: number, fret: number) => {
+    const s = Math.min(Math.max(0, stringIdx), n - 1)
+    const f = Math.min(Math.max(0, fret), frets)
+    // Åpne noter ligger på sadelen; grepne noter mellom de omkringliggende båndene.
+    const x = f === 0 ? fretX[0] : (fretX[f - 1] + fretX[f]) / 2
+    return { x, y: stringY[s] }
+  }
+
+  return { stringY, fretX, posOf }
+}
+
 /** Manhattan-aktig avstand mellom to posisjoner (et båndhopp koster 1, et
  * strengbytte koster 2 — strengskifter er fysisk større sprang). */
 function positionDistance(a: FretPosition, b: FretPosition): number {

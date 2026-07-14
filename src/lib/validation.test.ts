@@ -154,7 +154,10 @@ describe("theory metadata — mode / harmonic_function / kind (0004_theory_metad
 
   it("all seed licks still validate against seedLickSchema (no new-field regression)", async () => {
     const { SEED_LICKS } = await import("@/data/seed-licks");
-    for (const lick of SEED_LICKS) {
+    const { SEED_GITAR_LICKS } = await import("@/data/seed-licks-gitar");
+    // Vakten dekker BEGGE korpus — gitar-licks må også passere refineInstrument
+    // (hver note har `s`, utledet bånd i [0,15]).
+    for (const lick of [...SEED_LICKS, ...SEED_GITAR_LICKS]) {
       const r = seedLickSchema.safeParse(lick);
       expect(r.success, `slug "${lick.slug}" failed: ${!r.success ? JSON.stringify(r.error.issues) : ""}`).toBe(
         true,
