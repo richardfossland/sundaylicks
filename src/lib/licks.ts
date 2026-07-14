@@ -1,5 +1,6 @@
 import type { Lick, SeedLick } from '@/types/lick'
 import { SEED_LICKS } from '@/data/seed-licks'
+import { SEED_GITAR_LICKS } from '@/data/seed-licks-gitar'
 import { createClient } from './supabase/client'
 
 // Turn an authored SeedLick into a full Lick for offline/fallback use. The DB
@@ -13,7 +14,7 @@ function seedToLick(seed: SeedLick): Lick {
   }
 }
 
-export const FALLBACK_LICKS: Lick[] = SEED_LICKS.map(seedToLick)
+export const FALLBACK_LICKS: Lick[] = [...SEED_LICKS, ...SEED_GITAR_LICKS].map(seedToLick)
 
 /**
  * Load all published licks. Reads from Supabase (`licks.licks`) when configured,

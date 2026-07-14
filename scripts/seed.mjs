@@ -9,7 +9,12 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { SEED_LICKS } from '../src/data/seed-licks.ts'
+import { SEED_GITAR_LICKS } from '../src/data/seed-licks-gitar.ts'
 import { seedLickSchema } from '../src/lib/validation.ts'
+
+// Piano-korpuset + gitar-licks (G2+). Gitar-rader trenger `instrument: 'gitar'`-
+// kolonnen fra 0005_instrument.sql — kjør IKKE seed før eier har kjørt migrasjonen.
+const ALL_SEED_LICKS = [...SEED_LICKS, ...SEED_GITAR_LICKS]
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -21,7 +26,7 @@ if (!url || !serviceKey) {
 
 // Validate every lick before touching the DB.
 const rows = []
-for (const lick of SEED_LICKS) {
+for (const lick of ALL_SEED_LICKS) {
   const parsed = seedLickSchema.safeParse(lick)
   if (!parsed.success) {
     console.error(`✗ Ugyldig lick "${lick.slug}":`)

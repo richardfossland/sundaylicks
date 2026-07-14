@@ -12,7 +12,7 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
-import { Check, RotateCcw, Volume2, VolumeX, Loader2 } from 'lucide-react'
+import { Check, RotateCcw, Volume2, VolumeX, Loader2, Guitar } from 'lucide-react'
 import type { Lick } from '@/types/lick'
 import { transposedNotes } from '@/lib/transpose'
 import { KEY_NAMES } from '@/lib/music'
@@ -102,6 +102,11 @@ export function ReelCard({
           <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-raised)] px-2.5 py-0.5 text-xs text-[var(--color-muted)]">
             {CATEGORY_LABEL[lick.category]}
           </span>
+          {lick.instrument === 'gitar' && (
+            <span className="flex items-center gap-1 rounded-full border border-[var(--color-amber)]/50 bg-[var(--color-raised)] px-2.5 py-0.5 text-xs font-medium text-[var(--color-amber)] shadow-sm">
+              <Guitar className="h-3 w-3" /> Gitar
+            </span>
+          )}
           <DifficultyBadge difficulty={lick.difficulty} />
           <span>
             {KEY_NAMES[targetKey]}-dur · {lick.default_bpm} BPM · {lick.beats} slag

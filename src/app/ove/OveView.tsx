@@ -29,6 +29,8 @@ import { cn } from '@/lib/cn'
 type CatFilter = Category | 'all'
 type GenreFilter = Genre | 'all'
 type DiffFilter = Difficulty | 'all'
+/** Instrument-linse (D6): hele biblioteket, kun piano, eller kun gitar. */
+type InstFilter = 'all' | 'piano' | 'gitar'
 /** Top-level lens: the whole library, or just what the user has collected. */
 type ViewTab = 'all' | 'mine'
 /** Within "Mine lister": favorites, or a specific practice list by id. */
@@ -62,16 +64,25 @@ interface OveViewState {
   cat: CatFilter
   genre: GenreFilter
   diff: DiffFilter
+  inst: InstFilter
   query: string
   sort: SortKey
   filterOpen: boolean
 }
 
+const INSTS: { key: InstFilter; label: string }[] = [
+  { key: 'all', label: 'Alle' },
+  { key: 'piano', label: 'Piano' },
+  { key: 'gitar', label: 'Gitar' },
+]
+
+const INST_LABEL: Record<InstFilter, string> = { all: 'Alle', piano: 'Piano', gitar: 'Gitar' }
+
 const SORT_KEYS = SORTS.map((s) => s.key)
 
 /** Reject a stored blob whose fields no longer map to anything valid. */
 function validateOveState(d: Record<string, unknown>): OveViewState | null {
-  const { view, mineTab, cat, genre, diff, query, sort, filterOpen } = d
+  const { view, mineTab, cat, genre, diff, inst, query, sort, filterOpen } = d
   if (view !== 'all' && view !== 'mine') return null
   if (typeof mineTab !== 'string') return null
   if (cat !== 'all' && !isCategory(cat as string | null)) return null
@@ -80,12 +91,16 @@ function validateOveState(d: Record<string, unknown>): OveViewState | null {
   if (typeof query !== 'string') return null
   if (!(SORT_KEYS as string[]).includes(sort as string)) return null
   if (typeof filterOpen !== 'boolean') return null
+  // Bakoverkompat (D6): eldre lagrede blober har ikke `inst` — ugyldig/manglende
+  // verdi faller stille til 'all' i stedet for å forkaste hele blobben.
+  const instF: InstFilter = inst === 'piano' || inst === 'gitar' ? inst : 'all'
   return {
     view,
     mineTab,
     cat: cat as CatFilter,
     genre: genre as GenreFilter,
     diff: diff as DiffFilter,
+    inst: instF,
     query,
     sort: sort as SortKey,
     filterOpen,
@@ -119,6 +134,7 @@ export function OveView() {
   const [cat, setCat] = useState<CatFilter>(isCategory(initialCat) ? initialCat : 'all')
   const [genre, setGenre] = useState<GenreFilter>(isGenre(initialGenre) ? initialGenre : 'all')
   const [diff, setDiff] = useState<DiffFilter>('all')
+  const [inst, setInst] = useState<InstFilter>('all')
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<SortKey>('default')
   const [filterOpen, setFilterOpen] = useState(false)
@@ -166,6 +182,7 @@ export function OveView() {
       if (!isCategory(initialCat)) setCat(saved.cat)
       if (!isGenre(initialGenre)) setGenre(saved.genre)
       setDiff(saved.diff)
+      setInst(saved.inst)
       setQuery(saved.query)
       setSort(saved.sort)
       setFilterOpen(saved.filterOpen)
@@ -181,8 +198,8 @@ export function OveView() {
   // Persist the browse state on every change once hydrated (re-stamps the TTL).
   useEffect(() => {
     if (!hydratedRef.current) return
-    saveViewState(VIEW_KEY, { view, mineTab, cat, genre, diff, query, sort, filterOpen })
-  }, [view, mineTab, cat, genre, diff, query, sort, filterOpen])
+    saveViewState(VIEW_KEY, { view, mineTab, cat, genre, diff, inst, query, sort, filterOpen })
+  }, [view, mineTab, cat, genre, diff, inst, query, sort, filterOpen])
 
   // Stale-list guard: a restored (or ?list=) mineTab may point at a list that was
   // since deleted. Once collections have actually loaded, fall back to favorites
@@ -220,6 +237,7 @@ export function OveView() {
         (cat === 'all' || l.category === cat) &&
         (genre === 'all' || l.genre === genre) &&
         (diff === 'all' || l.difficulty === diff) &&
+        (inst === 'all' || (l.instrument ?? 'piano') === inst) &&
         (q === '' ||
           l.name.toLowerCase().includes(q) ||
           (l.description ?? '').toLowerCase().includes(q) ||
@@ -234,9 +252,10 @@ export function OveView() {
       newest: (a, b) => idx.get(b.slug)! - idx.get(a.slug)!,
     }
     return [...out].sort(cmp[sort])
-  }, [licks, activeList, showFavs, favorites, cat, genre, diff, query, sort, bySlug])
+  }, [licks, activeList, showFavs, favorites, cat, genre, diff, inst, query, sort, bySlug])
 
-  const activeFilterCount = (cat !== 'all' ? 1 : 0) + (genre !== 'all' ? 1 : 0) + (diff !== 'all' ? 1 : 0)
+  const activeFilterCount =
+    (cat !== 'all' ? 1 : 0) + (genre !== 'all' ? 1 : 0) + (diff !== 'all' ? 1 : 0) + (inst !== 'all' ? 1 : 0)
 
   const startCreate = () => {
     const id = createList(newName)
@@ -358,13 +377,16 @@ export function OveView() {
             genre={genre}
             cat={cat}
             diff={diff}
+            inst={inst}
             onClearGenre={() => setGenre('all')}
             onClearCat={() => setCat('all')}
             onClearDiff={() => setDiff('all')}
+            onClearInst={() => setInst('all')}
             onClearAll={() => {
               setGenre('all')
               setCat('all')
               setDiff('all')
+              setInst('all')
             }}
           />
 
@@ -403,6 +425,13 @@ export function OveView() {
                   </Chip>
                 ))}
               </FilterRow>
+              <FilterRow label="Instrument">
+                {INSTS.map((it) => (
+                  <Chip key={it.key} active={inst === it.key} onClick={() => setInst(it.key)}>
+                    {it.label}
+                  </Chip>
+                ))}
+              </FilterRow>
               {activeFilterCount > 0 && (
                 <div className="flex justify-end">
                   <button
@@ -410,6 +439,7 @@ export function OveView() {
                       setGenre('all')
                       setCat('all')
                       setDiff('all')
+                      setInst('all')
                     }}
                     className="text-sm text-[var(--color-muted)] hover:text-[var(--color-ivory)]"
                   >
@@ -540,23 +570,28 @@ function ActiveFilterChips({
   genre,
   cat,
   diff,
+  inst,
   onClearGenre,
   onClearCat,
   onClearDiff,
+  onClearInst,
   onClearAll,
 }: {
   genre: GenreFilter
   cat: CatFilter
   diff: DiffFilter
+  inst: InstFilter
   onClearGenre: () => void
   onClearCat: () => void
   onClearDiff: () => void
+  onClearInst: () => void
   onClearAll: () => void
 }) {
   const chips: { key: string; label: string; onClear: () => void }[] = []
   if (genre !== 'all') chips.push({ key: 'genre', label: GENRE_LABEL[genre], onClear: onClearGenre })
   if (cat !== 'all') chips.push({ key: 'cat', label: CATEGORY_LABEL[cat], onClear: onClearCat })
   if (diff !== 'all') chips.push({ key: 'diff', label: DIFFICULTY_LABEL[diff], onClear: onClearDiff })
+  if (inst !== 'all') chips.push({ key: 'inst', label: INST_LABEL[inst], onClear: onClearInst })
   if (chips.length === 0) return null
 
   return (
