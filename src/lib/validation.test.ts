@@ -162,3 +162,73 @@ describe("theory metadata — mode / harmonic_function / kind (0004_theory_metad
     }
   });
 });
+
+describe("instrument — piano/gitar-kobling (0005_instrument, refineInstrument)", () => {
+  it("defaulter til 'piano' når feltet mangler (bakoverkompat)", () => {
+    const r = submissionSchema.safeParse(base);
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.instrument).toBe("piano");
+  });
+
+  it("avviser en piano-note som bærer streng (s)", () => {
+    expect(
+      submissionSchema.safeParse({ ...base, notes: [{ p: 60, t: 0, d: 1, h: "R", s: 2 }] }).success,
+    ).toBe(false);
+  });
+
+  it("aksepterer en gitar-lick der hver note har gyldig s og utledet bånd i [0,15]", () => {
+    const r = submissionSchema.safeParse({
+      ...base,
+      instrument: "gitar",
+      notes: [
+        { p: 55, t: 0, d: 1, h: "R", s: 3 }, // G3 åpen (bånd 0)
+        { p: 60, t: 1, d: 1, h: "R", s: 3 }, // bånd 5
+      ],
+      beats: 4,
+    });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.instrument).toBe("gitar");
+  });
+
+  it("avviser en gitar-note uten streng (s)", () => {
+    expect(
+      submissionSchema.safeParse({
+        ...base,
+        instrument: "gitar",
+        notes: [{ p: 55, t: 0, d: 1, h: "R" }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("avviser s utenfor 0–5 (noteSchema-grense)", () => {
+    expect(
+      submissionSchema.safeParse({
+        ...base,
+        instrument: "gitar",
+        notes: [{ p: 60, t: 0, d: 1, h: "R", s: 6 }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("avviser gitar-note der utledet bånd > 15 (p − GUITAR_STANDARD[s])", () => {
+    // p=60 på lav-E-strengen (s=0, E2=40) ⇒ bånd 20 > 15.
+    expect(
+      submissionSchema.safeParse({
+        ...base,
+        instrument: "gitar",
+        notes: [{ p: 60, t: 0, d: 1, h: "R", s: 0 }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("håndhever koblingen også i seedLickSchema", () => {
+    expect(
+      seedLickSchema.safeParse({ ...base, slug: "gitar-lick", instrument: "gitar", notes: [{ p: 55, t: 0, d: 1, h: "R" }] })
+        .success,
+    ).toBe(false);
+    expect(
+      seedLickSchema.safeParse({ ...base, slug: "gitar-lick", instrument: "gitar", notes: [{ p: 55, t: 0, d: 1, h: "R", s: 3 }] })
+        .success,
+    ).toBe(true);
+  });
+});

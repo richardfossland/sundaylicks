@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { GUITAR_STANDARD, MAX_FRET } from './guitar/fretting'
 
 // Strict validation for lick data at seed / submission time. PLAN §7:
 //   t ≥ 0, d > 0, p in 21–108 (A0–C8), t + d ≤ beats.
@@ -9,6 +10,9 @@ export const noteSchema = z.object({
   d: z.number().positive(),
   h: z.enum(['L', 'R']),
   v: z.number().min(0).max(1).optional(),
+  // Gitar-streng 0–5 (0 = lav E). Piano-noter har den aldri; refineInstrument
+  // håndhever koblingen mellom `instrument` og tilstedeværelsen av `s`.
+  s: z.number().int().min(0).max(5).optional(),
 })
 
 export const chordSchema = z.object({
@@ -53,6 +57,10 @@ export const lickContent = z.object({
   // Distinguishes plain library licks ('lick', the default) from other
   // generated shapes (e.g. 'transition'). Free text — see `genre`.
   kind: z.string().min(1).max(24).default('lick'),
+  // Instrument (0005_instrument.sql). Standard 'piano' → alle pre-eksisterende
+  // licks (uten feltet) validerer uendret. 'gitar' krever `s` på hver note,
+  // håndhevet av refineInstrument under.
+  instrument: z.enum(['piano', 'gitar']).default('piano'),
 })
 
 // t + d must stay within `beats`, for both notes and chords.
@@ -80,13 +88,55 @@ const refineWithinBeats = (
   })
 }
 
+// Instrument-koblingen (D1/D1b): gitar-licks MÅ ha `s` på hver note, og det
+// utledede båndet f = p − GUITAR_STANDARD[s] må ligge i [0, 15]. Piano-noter
+// skal ALDRI bære `s`. Zod-refinementet er spillbarhetsgaten for gitar-innhold.
+const refineInstrument = (
+  lick: { instrument: 'piano' | 'gitar'; notes: { p: number; s?: number }[] },
+  ctx: z.RefinementCtx,
+) => {
+  if (lick.instrument === 'gitar') {
+    lick.notes.forEach((n, i) => {
+      if (n.s === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['notes', i, 's'],
+          message: `gitar-note ${i} mangler streng (s)`,
+        })
+        return
+      }
+      const fret = n.p - GUITAR_STANDARD[n.s]
+      if (fret < 0 || fret > MAX_FRET) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['notes', i],
+          message: `gitar-note ${i}: utledet bånd ${fret} utenfor 0–${MAX_FRET} (p=${n.p}, s=${n.s})`,
+        })
+      }
+    })
+  } else {
+    lick.notes.forEach((n, i) => {
+      if (n.s !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['notes', i, 's'],
+          message: `piano-note ${i} skal ikke ha streng (s)`,
+        })
+      }
+    })
+  }
+}
+
 // Full seed lick (author-provided slug required). Used by the seed script.
 export const seedLickSchema = lickContent
   .extend({ slug: z.string().regex(/^[a-z0-9-]+$/, 'slug må være kebab-case') })
   .superRefine(refineWithinBeats)
+  .superRefine(refineInstrument)
 
 // User submission (no slug — the server generates one). Used by /api/submit.
-export const submissionSchema = lickContent.superRefine(refineWithinBeats)
+export const submissionSchema = lickContent
+  .superRefine(refineWithinBeats)
+  .superRefine(refineInstrument)
 
 export type ValidatedSeedLick = z.infer<typeof seedLickSchema>
 export type LickSubmission = z.infer<typeof lickContent>

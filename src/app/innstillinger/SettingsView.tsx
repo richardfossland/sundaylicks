@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { Music, Volume2, Play, Timer, Sparkles, Download, Trash2 } from 'lucide-react'
+import { Music, Volume2, Play, Timer, Sparkles, Download, Trash2, Info } from 'lucide-react'
 import { KeySelector } from '@/components/KeySelector'
 import { useSession } from '@/lib/session'
 import { INSTRUMENT_ORDER, INSTRUMENT_LABEL } from '@/lib/instruments'
@@ -261,6 +261,28 @@ export function SettingsView() {
                 <Trash2 className="h-4 w-4" /> Nullstill all lokal data
               </button>
             )}
+          </div>
+        </Section>
+
+        {/* Om lyder og rettigheter */}
+        <Section icon={<Info className="h-5 w-5" />} title="Om lyder og rettigheter">
+          <div className="flex flex-col gap-2 text-sm text-[var(--color-muted)]">
+            <p>
+              <span className="text-[var(--color-ivory)]">Piano</span> — Salamander Grand-samples via
+              Tone.js-CDN (CC-BY 3.0, Alexander Holm).
+            </p>
+            <p>
+              <span className="text-[var(--color-ivory)]">Gitar</span> — akustisk gitar fra
+              tonejs-instruments / University of Iowa (CC-BY 3.0), self-hostet i appen.
+            </p>
+            <p>
+              <span className="text-[var(--color-ivory)]">El-piano</span> og{' '}
+              <span className="text-[var(--color-ivory)]">Pad</span> er syntetisert lokalt i appen —
+              ingen samples, ingen eksterne kilder.
+            </p>
+            <p className="text-xs">
+              Fulle kilder og lisenser: <code className="text-[var(--color-ivory)]">/samples/CREDITS.md</code>.
+            </p>
           </div>
         </Section>
       </div>
