@@ -941,6 +941,26 @@ export const GLOSSARY: GlossaryTerm[] = [
     body: 'Et grep er akkorden omsatt til fingre: hvilke strenger som trykkes hvor, hvilke som klinger åpne, og hvilke som dempes. De åpne grepene (G, C, D, Em, Am …) er gitarens grunnvokabular og klinger størst fordi løse strenger ringer med.\n\nBarrégrepet er nøkkelen videre: pekefingeren legges som en kapo over alle strengene, og resten av fingrene former et kjent grep oppå — dermed kan samme form flyttes til hvilken som helst toneart, ett bånd av gangen.\n\nFor gitar-licks med akkorder viser appen grep-diagrammer under øvingsvisningen — foreslått grep for hver akkord i licken, i den tonearten du har valgt.',
     seeAlso: ['baand', 'voicing'],
   },
+  {
+    id: 'rot-kvint',
+    term: 'Rot og kvint',
+    aliases: ['rot-kvint', 'rotkvint', 'root-fifth'],
+    category: 'teknikk',
+    short:
+      'Bassens enkleste og mest brukte figur: grunntonen (roten) på tunge slag, kvinten som svar. Fundamentet under utallige sanger.',
+    body: 'Rot og kvint er bassens grunnvokabular: spill akkordens grunntone på ener, kvinten på treer (eller som svar imellom), og du har en trygg, tydelig bunn som forteller øret nøyaktig hvilken akkord som klinger.\n\nDet er bevisst enkelt — og nettopp derfor uunnværlig. Country-bass, pop, rock og mye lovsang lever på rot–kvint; den lar alt oppå bevege seg fritt fordi bunnen er utvetydig.\n\nNeste steg er å legge til oktaven (grunntonen en oktav opp) og gjennomgangstoner mellom akkordene — men rot–kvint er stammen alt annet vokser ut fra.',
+    seeAlso: ['gaende-bass', 'oktavdobling'],
+  },
+  {
+    id: 'ghost-noter',
+    term: 'Ghost-noter',
+    aliases: ['ghost-note', 'ghost note', 'døde toner', 'dead notes'],
+    category: 'teknikk',
+    short:
+      'Nesten uhørbare, dempede anslag som fyller rytmen uten tonehøyde. Det du IKKE spiller tydelig — men som får grooven til å sitte.',
+    body: 'En ghost-note er et anslag spilt så svakt (eller med strengen dempet) at tonehøyden nesten forsvinner og bare den rytmiske «tikk» blir igjen. På bass og gitar gir de grooven puls mellom hovedtonene; på piano gjøres samme effekt med svært lav anslagsstyrke.\n\nHemmeligheten i funk, neo-soul og gospel: halvparten av det som gjør en lomme levende, er ghost-noter du knapt hører. De fyller de tomme sekstendedelene og gjør at hovedtonene spretter fram i kontrast.\n\nI appen er ghost-noter lagret med lav velocity — du ser dem som bleke anslag i pianorullen og hører dem som et pust under de tydelige tonene. Øv dem BEVISST svakt; det er lettere å legge til styrke senere enn å dempe.',
+    seeAlso: ['velocity', 'laid-back', 'groove'],
+  },
 ]
 
 export const GLOSSARY_BY_ID: ReadonlyMap<string, GlossaryTerm> = new Map(

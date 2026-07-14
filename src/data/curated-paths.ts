@@ -72,4 +72,11 @@ export const CURATED_PATHS: CuratedPath[] = [
       'Fra åpne grep til gospel-lead: lovsangskomp, sus-farger, Travis-plukk, pentatonboksen og turnarounds — gitarveien inn i biblioteket.',
     slugs: ['gitar-worship-komp-g', 'gitar-worship-susfarger-g', 'gitar-blues-boks1-am', 'gitar-travis-grunn-c', 'gitar-worship-driv-d', 'gitar-gospel-blueskurve-e', 'gitar-gospel-terser-g'],
   },
+  {
+    id: 'p_bass_grunnkurs',
+    name: 'Bass-grunnkurs',
+    description:
+      'Fra pedaltone til gående bass: rot-kvint, walk-ups, walking bass gjennom 2-5-1, neo-soul-lommer og oktav-groover. Bassveien inn i biblioteket.',
+    slugs: ['bass-worship-pedal-g', 'bass-groove-rotkvint-d', 'bass-gospel-walkup-c', 'bass-walk-251-c', 'bass-groove-neosoul-am', 'bass-worship-walk-d', 'bass-groove-motown-f'],
+  },
 ]
