@@ -25,7 +25,7 @@
     "react-dom": "19.2.4",
     "tailwind-merge": "^2.5.5",
     "tone": "^15.0.4",
-    "vexflow": "^4.2.5",
+    "vexflow": "^5.0.0",
     "zod": "^3.24.1",
     "zustand": "^5.0.2"
   },
