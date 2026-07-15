@@ -16,13 +16,13 @@
     "check": "tsc --noEmit && vitest run"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.12.0",
+    "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.108.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.460.0",
-    "next": "16.2.9",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "next": "16.2.10",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
     "tailwind-merge": "^2.5.5",
     "tone": "^15.0.4",
     "vexflow": "^4.2.5",
@@ -38,6 +38,6 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10",
-    "wrangler": "^4.99.0"
+    "wrangler": "^4.111.0"
   }
 }
