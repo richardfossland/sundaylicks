@@ -22,7 +22,7 @@ import {
 import type { Lick, LickNote, LickChord, HandFilter } from '@/types/lick'
 import { instrumentForLick, type InstrumentKind } from '@/lib/instruments'
 import { fetchLick } from '@/lib/licks'
-import { transposedNotes, transposedChords } from '@/lib/transpose'
+import { transposedPlayableNotes, transposedChords } from '@/lib/transpose'
 import { getEngine } from '@/lib/playback'
 import { installAudioUnlock } from '@/lib/audio-unlock'
 import { usePlayer, hydratePracticeDefaults } from '@/lib/store'
@@ -286,10 +286,10 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
 
   const notesForKeyboard = useMemo(
     () =>
-      lick ? transposedNotes(lick, targetKey).filter((n) => playbackHand === 'both' || n.h === playbackHand) : [],
+      lick ? transposedPlayableNotes(lick, targetKey).filter((n) => playbackHand === 'both' || n.h === playbackHand) : [],
     [lick, targetKey, playbackHand],
   )
-  const notesAll = useMemo(() => (lick ? transposedNotes(lick, targetKey) : []), [lick, targetKey])
+  const notesAll = useMemo(() => (lick ? transposedPlayableNotes(lick, targetKey) : []), [lick, targetKey])
   // Dagens økt: slug-lista leses fra localStorage + JSON.parse. Den lå i
   // render-kroppen, som under avspilling betyr ~60 synkrone lesninger i sekundet
   // (currentBeat re-rendrer siden per frame). Memoisert på listCtx — den er det
@@ -516,6 +516,8 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
           fretted={fretted}
           tuning={bass ? BASS_EADG : GUITAR_STANDARD}
           notes={notesForKeyboard}
+          allNotes={notesAll}
+          hand={playbackHand}
           chords={chords}
           showOverlay={showOverlay}
           practiceOn={practiceOn}
@@ -840,6 +842,8 @@ function LiveHero({
   fretted,
   tuning,
   notes,
+  allNotes,
+  hand,
   chords,
   showOverlay,
   practiceOn,
@@ -858,6 +862,10 @@ function LiveHero({
   expected?: Set<number>
   feedback?: Map<number, Feedback>
   onPress: (midi: number) => void
+  /** Hele notesettet + stemme-filter — brettet beregner posisjoner på ALT
+   * (delt fingering med TAB-en) og tegner bare valgt stemme. */
+  allNotes: LickNote[]
+  hand: HandFilter
 }) {
   const currentBeat = usePlayer((s) => s.currentBeat)
   const beat = practiceOn ? -1 : isPlaying ? currentBeat : 0
@@ -875,7 +883,8 @@ function LiveHero({
 
   return fretted ? (
     <Fretboard
-      notes={notes}
+      notes={allNotes}
+      hand={hand}
       tuning={tuning}
       currentBeat={beat}
       expected={expected}

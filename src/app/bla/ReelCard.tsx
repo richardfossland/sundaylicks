@@ -14,7 +14,7 @@ import { memo, useMemo } from 'react'
 import Link from 'next/link'
 import { Check, RotateCcw, Volume2, VolumeX, Loader2, Guitar, AudioLines } from 'lucide-react'
 import type { Lick } from '@/types/lick'
-import { transposedNotes } from '@/lib/transpose'
+import { transposedPlayableNotes } from '@/lib/transpose'
 import { KEY_NAMES } from '@/lib/music'
 import { CATEGORY_LABEL, GENRE_LABEL } from '@/lib/labels'
 import { usePlayer } from '@/lib/store'
@@ -65,7 +65,7 @@ export const ReelCard = memo(function ReelCard({
   onReplay,
   onToggleAutoplay,
 }: Props) {
-  const notes = useMemo(() => (near ? transposedNotes(lick, targetKey) : []), [near, lick, targetKey])
+  const notes = useMemo(() => (near ? transposedPlayableNotes(lick, targetKey) : []), [near, lick, targetKey])
 
   // ?key= only when actually transposed away from the lick's own key (LickCard idiom).
   const transposed = targetKey !== lick.original_key

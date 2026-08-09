@@ -211,11 +211,24 @@ export function fretPositions(
       refingered.push(pos)
       prev = pos
     } else {
-      // Utenfor halsen selv etter om-fingring: klem båndet inn på nærmeste
-      // streng slik at invarianten (p = tuning[s] + f) fortsatt kan holde ved
-      // rendering. Ekstremt sjeldent for reelt fretted-innhold.
-      const s = n.s ?? 0
-      refingered.push({ string: s, fret: Math.max(0, Math.min(MAX_FRET, pitch - tuning[s])) })
+      // Utenfor halsen selv etter om-fingring. Skal ikke skje når input kommer
+      // via transposedPlayableNotes (som oktav-folder først) — men defensivt:
+      // FOLD til nærmeste spillbare oktav i stedet for å klemme båndet (den
+      // gamle clampen brøt invarianten p = tuning[s] + f og tegnet feil tone,
+      // opptil 5 halvtoner). Merk: klingende tone er da en annen oktav enn
+      // input — kalleren burde ha foldet selv.
+      let folded = pitch
+      const lo = tuning[0]
+      const hi = tuning[tuning.length - 1] + MAX_FRET
+      while (folded < lo) folded += 12
+      while (folded > hi) folded -= 12
+      const pos2 = bestPosition(folded, tuning, prev, MAX_FRET)
+      if (pos2) {
+        refingered.push(pos2)
+        prev = pos2
+      } else {
+        refingered.push({ string: n.s ?? 0, fret: 0 })
+      }
     }
   }
   return refingered

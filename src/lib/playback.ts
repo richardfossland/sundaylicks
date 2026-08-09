@@ -1,7 +1,7 @@
 import * as Tone from 'tone'
 import type { Lick, HandFilter } from '@/types/lick'
 import { frettedInstrument, type InstrumentKind } from './instruments'
-import { transposedNotes } from './transpose'
+import { transposedPlayableNotes } from './transpose'
 import { usePlayer } from './store'
 import { ensureAudioRunning } from './audio-unlock'
 
@@ -230,7 +230,7 @@ class PlaybackEngine {
     // Dispose any prior part before replacing.
     this.part?.dispose()
 
-    const notes = transposedNotes(lick, opts.targetKey).filter(
+    const notes = transposedPlayableNotes(lick, opts.targetKey).filter(
       (n) => opts.hand === 'both' || n.h === opts.hand,
     )
 
