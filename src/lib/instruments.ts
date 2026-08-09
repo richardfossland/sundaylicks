@@ -23,3 +23,20 @@ export const INSTRUMENT_LABEL: Record<InstrumentKind, string> = {
 export function isValidInstrument(v: unknown): v is InstrumentKind {
   return v === 'piano' || v === 'gitar' || v === 'bass' || v === 'elpiano' || v === 'pad'
 }
+
+/** Lyden et fretted lick KREVER, eller null for piano/ukjent. Tar `string` fordi
+ * `Lick.instrument` er fritekst på DB-laget (se 0005_instrument.sql). */
+export function frettedInstrument(lickInstrument: string | undefined | null): InstrumentKind | null {
+  return lickInstrument === 'gitar' ? 'gitar' : lickInstrument === 'bass' ? 'bass' : null
+}
+
+/** Lyden en lick skal spilles med: et fretted lick bærer sin egen (gitar/bass),
+ * alt annet spilles med brukerens valgte lyd. Regelen bodde tidligere kun i
+ * Practice — den hører hjemme her, slik at reel, oppslagsverk og /spill får
+ * samme svar uten å duplisere den. */
+export function instrumentForLick(
+  lickInstrument: string | undefined | null,
+  fallback: InstrumentKind,
+): InstrumentKind {
+  return frettedInstrument(lickInstrument) ?? fallback
+}

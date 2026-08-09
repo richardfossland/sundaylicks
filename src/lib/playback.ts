@@ -1,6 +1,6 @@
 import * as Tone from 'tone'
 import type { Lick, HandFilter } from '@/types/lick'
-import type { InstrumentKind } from './instruments'
+import { frettedInstrument, type InstrumentKind } from './instruments'
 import { transposedNotes } from './transpose'
 import { usePlayer } from './store'
 import { ensureAudioRunning } from './audio-unlock'
@@ -14,10 +14,11 @@ import { ensureAudioRunning } from './audio-unlock'
 //             nettverkslast → de eneste som rører isLoading.
 // 'elpiano' — FM-syntetisert elektrisk piano (generisk navn, ingen varemerker).
 // 'pad'     — myk fatsawtooth-flate m/ sakte attack → romklang.
-// Noder DISPOSES ALDRI ved bytte: begge trigger-sites går via ensureInstrument()
-// så dobbel lyd er umulig, og bytte-tilbake-til-piano er øyeblikkelig (ingen
-// CDN-reload). setInstrument() gjør releaseAll() på forrige node så hengende
-// toner kuttes midt i avspilling.
+// Noder DISPOSES ALDRI ved bytte: de caches per kind, så bytte-tilbake-til-piano
+// er øyeblikkelig (ingen CDN-reload). setInstrument() gjør releaseAll() på
+// forrige node så hengende toner kuttes midt i avspilling, OG bygger den nye
+// noden med én gang — Part-tilbakekallet slår opp noden per event, og en tom
+// cache betyr stille toner (se ensureInstrument/Part-tilbakekallet).
 const SALAMANDER_BASE = 'https://tonejs.github.io/audio/salamander/'
 
 type InstrumentNode = Tone.Sampler | Tone.PolySynth
@@ -44,6 +45,11 @@ export interface BuildOptions {
   bpm: number
   loop: boolean
   swing?: number // 0 = straight, ~0.5 = jazz swing (Tone.Transport.swing)
+  /** Lyden denne Parten skal spilles med. Utelates den, beholder motoren
+   * gjeldende lyd — MEN et fretted lick drar alltid med seg sin egen (gitar/
+   * bass). Regelen bor her, ikke i én enkelt side, slik at reel, oppslagsverk,
+   * /spill og admin-forhåndsvisning spiller en bass-lick med bass-lyd. */
+  instrument?: InstrumentKind
 }
 
 /**
@@ -54,6 +60,18 @@ export interface BuildOptions {
 class PlaybackEngine {
   private kind: InstrumentKind = 'piano'
   private nodes: Partial<Record<InstrumentKind, InstrumentNode>> = {}
+  /** Bygg som er underveis, per kind — så to samtidige ensureInstrument() for
+   * samme lyd deler én node i stedet for å bygge (og laste) den to ganger. */
+  private pending: Partial<Record<InstrumentKind, Promise<InstrumentNode>>> = {}
+  /**
+   * Sant mens en side eier lyden lokalt (Practices D5b-overstyring). AppShell
+   * speiler den globale sesjons-lyden inn i motoren ved hver montering, og
+   * hopper over når dette flagget står — ellers ville rekkefølgen mellom
+   * sesjons-hydreringen og Practices montering avgjøre hvilken lyd som vinner.
+   * I dag går det bra fordi Practice er dynamisk importert (monterer sist);
+   * flagget gjør avhengigheten eksplisitt i stedet for tilfeldig.
+   */
+  pageOverrideActive = false
   private part: Tone.Part | null = null
   private raf: number | null = null
   private totalBeats = 0
@@ -84,13 +102,38 @@ class PlaybackEngine {
     if (kind === this.kind) return
     this.nodes[this.kind]?.releaseAll()
     this.kind = kind
+    // Bygg noden med én gang. Uten dette peker Part-tilbakekallet på en tom
+    // cache og dropper HVER tone stille til noe annet tilfeldigvis kaller
+    // ensureInstrument() — f.eks. bytte av lyd midt i avspilling, eller
+    // liste-navigasjon fra et piano-lick til et gitar-lick. ensureInstrument()
+    // er idempotent og selv-cachende, så gjentatte kall er gratis.
+    void this.ensureInstrument().catch(() => {})
   }
 
-  private async ensureInstrument(): Promise<InstrumentNode> {
-    const cached = this.nodes[this.kind]
-    if (cached) return cached
+  /** Bygg (eller hent fra cache) noden for gjeldende lyd. Idempotent. */
+  private ensureInstrument(): Promise<InstrumentNode> {
+    const kind = this.kind
+    const cached = this.nodes[kind]
+    if (cached) return Promise.resolve(cached)
+    const inflight = this.pending[kind]
+    if (inflight) return inflight
+    // Bind resultatet til kind-en vi startet med: et lyd-bytte under den
+    // asynkrone lastingen skal ikke lagre noden under feil nøkkel.
+    const p = this.buildInstrument(kind)
+      .then((node) => {
+        this.nodes[kind] = node
+        return node
+      })
+      .finally(() => {
+        delete this.pending[kind]
+      })
+    this.pending[kind] = p
+    return p
+  }
+
+  private async buildInstrument(kind: InstrumentKind): Promise<InstrumentNode> {
     let node: InstrumentNode
-    if (this.kind === 'piano') {
+    if (kind === 'piano') {
       // Eneste instrument med nettverkslast → eneste som setter isLoading.
       usePlayer.getState().set({ isLoading: true })
       node = new Tone.Sampler({
@@ -100,7 +143,7 @@ class PlaybackEngine {
       }).toDestination()
       await Tone.loaded()
       usePlayer.getState().set({ isLoading: false })
-    } else if (this.kind === 'gitar') {
+    } else if (kind === 'gitar') {
       // Akustisk gitar — self-hostet liten-ters-subset A2–C5 fra public/samples/
       // gitar/ (CC-BY, tonejs-instruments/Iowa). Nettverkslast som piano → rører
       // isLoading; Sampler ekstrapolerer opp/ned mellom samplene.
@@ -123,7 +166,7 @@ class PlaybackEngine {
       }).toDestination()
       await Tone.loaded()
       usePlayer.getState().set({ isLoading: false })
-    } else if (this.kind === 'bass') {
+    } else if (kind === 'bass') {
       // El-bass — self-hostet E1–G3-subset fra public/samples/bass/ (CC-BY,
       // tonejs-instruments bass-electric; native grid E/G/A#/C#). Nettverkslast
       // som piano/gitar → rører isLoading; Sampler ekstrapolerer mellom samplene.
@@ -146,7 +189,7 @@ class PlaybackEngine {
       }).toDestination()
       await Tone.loaded()
       usePlayer.getState().set({ isLoading: false })
-    } else if (this.kind === 'elpiano') {
+    } else if (kind === 'elpiano') {
       const ep = new Tone.PolySynth(Tone.FMSynth, {
         harmonicity: 3,
         modulationIndex: 14,
@@ -169,7 +212,6 @@ class PlaybackEngine {
       pad.connect(verb)
       node = pad
     }
-    this.nodes[this.kind] = node
     return node
   }
 
@@ -177,6 +219,13 @@ class PlaybackEngine {
   build(lick: Lick, opts: BuildOptions) {
     const PPQ = Tone.Transport.PPQ
     const beatToTicks = (beat: number) => Math.round(beat * PPQ) + 'i'
+
+    // Lyden hører til innholdet: en eksplisitt `instrument` fra kalleren vinner
+    // (Practices side-lokale D5b-valg), ellers drar et fretted lick med seg sin
+    // egen. Uten dette spilte /bla, oppslagsverket og /spill gitar- og
+    // bass-licks med piano-lyd.
+    const wanted = opts.instrument ?? frettedInstrument(lick.instrument)
+    if (wanted) this.setInstrument(wanted)
 
     // Dispose any prior part before replacing.
     this.part?.dispose()
@@ -193,9 +242,17 @@ class PlaybackEngine {
     }))
 
     const part = new Tone.Part((time, ev) => {
-      const freq = Tone.Frequency(ev.midi, 'midi').toFrequency()
       // Leses dynamisk per event → instrumentbytte trenger aldri Part-rebuild.
-      this.nodes[this.kind]?.triggerAttackRelease(freq, ev.durTicks, time, ev.vel)
+      const node = this.nodes[this.kind]
+      if (!node) {
+        // Cache-bom: noden er ikke bygget (ennå). Fyr av byggingen uten å vente
+        // — tonene kommer tilbake av seg selv når den er klar, i stedet for at
+        // resten av licken går stille.
+        void this.ensureInstrument().catch(() => {})
+        return
+      }
+      const freq = Tone.Frequency(ev.midi, 'midi').toFrequency()
+      node.triggerAttackRelease(freq, ev.durTicks, time, ev.vel)
     }, events)
     part.start(0)
 
@@ -314,6 +371,11 @@ class PlaybackEngine {
     this.stop()
     this.part?.dispose()
     this.part = null
+    // A-B-området er side-lokalt (Practice). Uten nullstilling her arvet neste
+    // side motorens gamle loop-punkter: reel og oppslagsverk-demoer startet på
+    // takt A og ble kuttet ved B.
+    this.loopStartBeat = 0
+    this.loopEndBeat = null
   }
 }
 

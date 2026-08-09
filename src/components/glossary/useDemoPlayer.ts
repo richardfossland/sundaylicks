@@ -20,6 +20,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Lick } from '@/types/lick'
 import { getEngine } from '@/lib/playback'
 import { usePlayer } from '@/lib/store'
+import { useSession } from '@/lib/session'
+import { instrumentForLick } from '@/lib/instruments'
 import type { DemoChord, DemoPhrase } from '@/data/glossary-demos'
 
 // Modul-lokal: opprydding for demoen som spiller akkurat nå (én på tvers av appen).
@@ -129,12 +131,16 @@ export function useDemoPlayer(): DemoPlayer {
     (key: string, phrase: DemoPhrase) => {
       takeOver()
       const engine = getEngine()
-      engine.build(phraseToLick(phrase), {
+      const lick = phraseToLick(phrase)
+      engine.build(lick, {
         targetKey: 0,
         hand: 'both',
         bpm: phrase.bpm ?? 90,
         loop: false,
         swing: phrase.swing,
+        // Demoene er piano-fraser → brukerens sesjons-lyd. Sendes eksplisitt så
+        // en demo etter et gitar-/bass-lick ikke arver den lyden fra motoren.
+        instrument: instrumentForLick(lick.instrument, useSession.getState().instrument),
       })
       phraseActive.current = true
       setPlayingKey(key)
