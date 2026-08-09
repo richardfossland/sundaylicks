@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Renderer, TabStave, TabNote, GhostNote, Voice, Formatter, Tuplet } from 'vexflow'
 import type { LickNote } from '@/types/lick'
 import { buildTabNotes } from '@/lib/tab'
-import { BASS_EADG, GUITAR_STANDARD } from '@/lib/guitar/fretting'
+import { BASS_EADG, GUITAR_STANDARD } from '@/lib/fretted/fretting'
 
 const IVORY = '#F3EAD9'
 

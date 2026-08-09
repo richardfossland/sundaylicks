@@ -1,5 +1,5 @@
 import type { Lick, LickNote, LickChord } from '@/types/lick'
-import { MAX_FRET, TUNING_FOR } from './guitar/fretting.ts'
+import { MAX_FRET, TUNING_FOR } from './fretted/fretting.ts'
 import { chordLabel, pitchClass } from './music'
 
 /**

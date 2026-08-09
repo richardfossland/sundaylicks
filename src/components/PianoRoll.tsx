@@ -95,7 +95,8 @@ export function PianoRoll({ notes, hand, beats, currentBeat, loopRange }: Props)
         })}
       </>
     )
-  }, [notes, hand, beats, loopA, loopB, lo, hi, rows, height, width])
+    // `lo` leses ikke her — det er allerede dekket via `rows` (= hi − lo + 1).
+  }, [notes, hand, beats, loopA, loopB, hi, rows, height, width])
 
   return (
     <div className="scroll-x rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2">

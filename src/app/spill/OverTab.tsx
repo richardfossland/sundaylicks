@@ -138,7 +138,6 @@ export function OverTab() {
       syncedFromSession.current = true
     }
     hydratedRef.current = true
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Persist on every change once hydrated (re-stamps the TTL). Never `preview`.

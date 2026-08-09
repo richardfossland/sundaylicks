@@ -3,7 +3,7 @@
 // The grip library behind the gitar content: ~20 open ("cowboy") shapes plus
 // movable E-form and A-form barre derivations, so every root × common quality
 // resolves to at least one playable grip. Portert verbatim fra SundaySchool; den
-// eneste endringen er at standardstemmingen gjenbrukes fra lib/guitar/fretting.ts
+// eneste endringen er at standardstemmingen gjenbrukes fra lib/fretted/fretting.ts
 // (GUITAR_STANDARD) i stedet for en lokal kopi, så det finnes én sannhetskilde.
 //
 // Conventions:

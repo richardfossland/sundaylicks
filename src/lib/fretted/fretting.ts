@@ -11,6 +11,10 @@
 // identisk med GUITAR_STANDARD-indeksen. Bånd lagres ALDRI på en note; det
 // utledes alltid som `f = p − GUITAR_STANDARD[s]` (D1b) og kan derfor aldri bli
 // inkonsistent med tonehøyden.
+//
+// Katalogen het `lib/guitar/` fram til N5, men BASS_EADG og TUNING_FOR har alltid
+// bodd her — navnet løy. `lib/fretted/` er det ærlige navnet: alt som har
+// strenger og bånd, gitar OG bass.
 
 import type { LickNote, Instrument } from '@/types/lick'
 

@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { ChevronDown, Guitar } from 'lucide-react'
 import type { LickChord } from '@/types/lick'
 import { chordLabel } from '@/lib/music'
-import { shapesFor } from '@/lib/guitar/chord-shapes'
+import { shapesFor } from '@/lib/fretted/chord-shapes'
 import { ChordDiagram } from './ChordDiagram'
 import { cn } from '@/lib/cn'
 

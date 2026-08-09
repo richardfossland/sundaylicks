@@ -13,7 +13,7 @@
 
 import { useState, useMemo } from 'react'
 import { Loader2, Play, Square } from 'lucide-react'
-import type { GlossaryDemo, DemoChord, DemoPhrase } from '@/data/glossary-demos'
+import type { GlossaryDemo, DemoPhrase } from '@/data/glossary-demos'
 import type { Key } from '@/lib/theory/keys'
 import { chordPitchClasses } from '@/lib/music'
 import { nearestOffset } from '@/lib/transpose'
@@ -32,7 +32,7 @@ export default function DemoBlock({ demo }: { demo: GlossaryDemo }) {
       {demo.kind === 'keyboard' && <KeyboardDemo demo={demo} />}
       {demo.kind === 'progression' && <ProgressionDemo demo={demo} />}
       {demo.kind === 'ab' && <AbDemo demo={demo} />}
-      {demo.kind === 'circle' && <CircleDemo demo={demo} />}
+      {demo.kind === 'circle' && <CircleDemo />}
       <p className="mt-3 text-xs leading-relaxed text-[var(--color-muted)]">{demo.caption}</p>
     </div>
   )
@@ -125,7 +125,7 @@ function PhraseBody({ phrase, beat }: { phrase: DemoPhrase; beat: number }) {
   const activeChord = chords.find((c) => c.t - EPS <= beat && beat < c.t + c.d - EPS) ?? chords[0]
   return (
     <div className="flex flex-col gap-2">
-      {chords.length > 0 && <ChordStrip chords={chords} beats={phrase.beats} currentBeat={beat} />}
+      {chords.length > 0 && <ChordStrip chords={chords} currentBeat={beat} />}
       <MiniKeyboard pitches={allPitches} active={active} root={activeChord?.r} />
     </div>
   )
@@ -215,7 +215,9 @@ function AbDemo({ demo }: { demo: Extract<GlossaryDemo, { kind: 'ab' }> }) {
 
 // ── Kvintsirkel ──────────────────────────────────────────────────────────────
 
-function CircleDemo({ demo }: { demo: Extract<GlossaryDemo, { kind: 'circle' }> }) {
+// Sirkel-demoen har ingen nyttelast utover `caption`, og den tegner DemoBlock
+// selv — derfor tar denne ingen props (tidligere tok den `demo` uten å lese den).
+function CircleDemo() {
   const player = useDemoPlayer()
   const [sel, setSel] = useState<Key>({ root: 0, mode: 'major' })
 

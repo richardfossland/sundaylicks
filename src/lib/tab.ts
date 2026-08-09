@@ -1,5 +1,5 @@
 import type { LickNote } from '@/types/lick'
-import { fretPositions, GUITAR_STANDARD } from './guitar/fretting'
+import { fretPositions, GUITAR_STANDARD } from './fretted/fretting'
 
 // ── Fretted-TAB-bygging (ren, ingen VexFlow, ingen DOM) ──────────────────────
 // Speiler notation.ts sin onset-gruppering og varighets-klassifisering, men for

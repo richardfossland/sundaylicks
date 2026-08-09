@@ -1,6 +1,6 @@
 'use client'
 
-import type { Shape } from '@/lib/guitar/chord-shapes'
+import type { Shape } from '@/lib/fretted/chord-shapes'
 
 // ── ChordDiagram — SVG grip-diagram ──────────────────────────────────────────
 // Den klassiske vertikale akkordboksen: 6 strenger × 4–5 bånd, fingerprikker,
