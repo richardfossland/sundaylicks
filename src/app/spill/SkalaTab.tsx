@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { BookOpen, Loader2, Play, Square } from 'lucide-react'
 import type { Lick } from '@/types/lick'
 import { useSession } from '@/lib/session'
+import { instrumentForLick } from '@/lib/instruments'
 import { getEngine } from '@/lib/playback'
 import { usePlayer } from '@/lib/store'
 import { installAudioUnlock } from '@/lib/audio-unlock'
@@ -172,7 +173,14 @@ export function SkalaTab() {
       setPlayingId(null)
       return
     }
-    engine.build(lick, { targetKey: lick.original_key, hand: 'both', bpm: lick.default_bpm, loop: false })
+    engine.build(lick, {
+      targetKey: lick.original_key,
+      hand: 'both',
+      bpm: lick.default_bpm,
+      loop: false,
+      // Lyden følger licken (fretted bærer sin egen), ellers sesjons-lyden.
+      instrument: instrumentForLick(lick.instrument, useSession.getState().instrument),
+    })
     void engine.play()
     setPlayingId(id)
   }

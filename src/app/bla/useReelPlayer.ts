@@ -14,6 +14,9 @@
 //     before that, and iOS additionally needs installAudioUnlock()'s handling.
 //   • Playback stops when the tab is hidden, and the engine is disposed on
 //     unmount (route change) so no Transport/RAF loop leaks.
+//   • Lyden følger kortet: et gitar-/bass-lick spilles med sitt eget instrument,
+//     alt annet med brukerens sesjons-lyd (instrumentForLick). Sendes eksplisitt
+//     ved hvert bygg, ellers ville et bass-kort «smitte» på neste piano-kort.
 
 import { useCallback, useEffect, useState } from 'react'
 import * as Tone from 'tone'
@@ -21,6 +24,8 @@ import type { Lick } from '@/types/lick'
 import { getEngine } from '@/lib/playback'
 import { usePlayer } from '@/lib/store'
 import { installAudioUnlock } from '@/lib/audio-unlock'
+import { useSession } from '@/lib/session'
+import { instrumentForLick } from '@/lib/instruments'
 
 /** ms of quiet after the active card settles before autoplay fires. */
 const AUTOPLAY_DEBOUNCE_MS = 300
@@ -76,7 +81,13 @@ export function useReelPlayer({ lick, targetKey, autoplay, enabled }: Options): 
     if (typeof document !== 'undefined' && document.hidden) return
 
     const timer = setTimeout(() => {
-      engine.build(lick, { targetKey, hand: 'both', bpm: lick.default_bpm, loop: false })
+      engine.build(lick, {
+        targetKey,
+        hand: 'both',
+        bpm: lick.default_bpm,
+        loop: false,
+        instrument: instrumentForLick(lick.instrument, useSession.getState().instrument),
+      })
       void engine.play()
     }, AUTOPLAY_DEBOUNCE_MS)
 

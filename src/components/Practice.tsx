@@ -20,7 +20,7 @@ import {
   Guitar,
 } from 'lucide-react'
 import type { Lick, HandFilter } from '@/types/lick'
-import type { InstrumentKind } from '@/lib/instruments'
+import { instrumentForLick, type InstrumentKind } from '@/lib/instruments'
 import { fetchLick } from '@/lib/licks'
 import { transposedNotes, transposedChords } from '@/lib/transpose'
 import { getEngine } from '@/lib/playback'
@@ -54,6 +54,20 @@ import { GlossaryText } from './glossary/GlossaryText'
 
 type View = 'roll' | 'notation' | 'tab'
 
+/**
+ * Kjør en jobb UTENFOR den lyd-kritiske rammen. queueMicrotask holder ikke —
+ * mikrotasker kjøres før nettleseren slipper rammen, altså fortsatt midt i
+ * loop-wrappen. Ledig tid når nettleseren tilbyr det (med tak, så skrivingen
+ * ikke utsettes i det uendelige), ellers neste makrotask.
+ */
+function deferOffFrame(fn: () => void) {
+  if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(() => fn(), { timeout: 500 })
+    return
+  }
+  setTimeout(fn, 0)
+}
+
 interface PracticeProps {
   /** Slug of a published/fallback lick to fetch. Ignored when `lick` is given. */
   slug: string
@@ -82,10 +96,9 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
   // speiler den inn i motoren og gjenoppretter session-lyden når man forlater
   // siden. /innstillinger forblir global default; her overstyrer vi bare for
   // denne licken.
-  const [pageInstrument, setPageInstrument] = useState<InstrumentKind>(() => {
-    const inst = lickProp?.instrument ?? 'piano'
-    return inst === 'gitar' ? 'gitar' : inst === 'bass' ? 'bass' : useSession.getState().instrument
-  })
+  const [pageInstrument, setPageInstrument] = useState<InstrumentKind>(() =>
+    instrumentForLick(lickProp?.instrument, useSession.getState().instrument),
+  )
   const [showOverlay, setShowOverlay] = useState(false)
   const [copied, setCopied] = useState(false)
   const [ramp, setRamp] = useState(false)
@@ -118,6 +131,10 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
   loopRef.current = loop
   const swingRef = useRef(swing)
   swingRef.current = swing
+  // Side-lokal lyd inn i build() UTEN å stå i effektens deps: et lyd-bytte skal
+  // aldri bygge Parten på nytt (motoren slår opp noden per event).
+  const pageInstrumentRef = useRef(pageInstrument)
+  pageInstrumentRef.current = pageInstrument
 
   // Which hand plays back: in band mode the app plays the BACKING hand while you
   // play the other one live.
@@ -151,14 +168,23 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
       const inst = l.instrument ?? 'piano'
       const isFretted = inst !== 'piano'
       setView(isFretted ? 'tab' : 'roll')
-      setPageInstrument(
-        inst === 'gitar' ? 'gitar' : inst === 'bass' ? 'bass' : useSession.getState().instrument,
-      )
+      setPageInstrument(instrumentForLick(inst, useSession.getState().instrument))
       setTargetKey(share.key ?? l.original_key)
       setBpm(share.bpm ?? l.default_bpm)
       setLoopB(l.beats)
       setLoopA(0)
-      if (share.hand) setHand(share.hand)
+      // Nullstill de lick-avhengige modusene ved HVERT bytte. Liste-navigasjon
+      // («Neste») gjenbruker denne komponenten, så hånd-filter, band-modus og
+      // øvemodus ville ellers fulgt med over i neste lick — og på et bass-lick
+      // er både hånd-velgeren og band-modus SKJULT (enstemmig, BD7): en arvet
+      // 'L' ga tomt gripebrett og stum avspilling uten synlig vei tilbake.
+      setHand('both')
+      setBandMode(false)
+      setPracticeOn(false)
+      // Delelenker (?hand=L) skal fortsatt virke — men hånd-valget gir ingen
+      // mening for et enstemmig bass-lick, så der ignoreres det (degraderer til
+      // 'both' i stedet for et tomt brett).
+      if (share.hand && inst !== 'bass') setHand(share.hand)
       syncedRef.current = true
     }
 
@@ -210,8 +236,13 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
       targetKey,
       hand: playbackHand,
       bpm: bpmRef.current,
+      // Samme utledning som loop-effekten under (én regel, to lesere: her er det
+      // bare byggets STARTVERDI — effekten er den eneste som SKRIVER siden).
       loop: loopRef.current || abLoop || bandMode,
       swing: swingRef.current,
+      // Siden eier lyden (D5b), så den følger med bygget. Uten dette kunne denne
+      // effekten kjøre FØR lyd-effekten under ved liste-navigasjon piano→gitar.
+      instrument: pageInstrumentRef.current,
     })
     if (wasPlaying) void engine.play()
   }, [lick, targetKey, playbackHand, abLoop, bandMode])
@@ -221,15 +252,32 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
     getEngine().setLoopRange(abLoop ? loopA : null, abLoop ? loopB : null)
   }, [abLoop, loopA, loopB])
 
-  // Side-lokal lyd (D5b): speil pageInstrument inn i motoren mens siden lever,
-  // og gjenopprett det globale session-instrumentet ved unmount (cleanup) — så
-  // et gitar-lick spiller gitar automatisk uten å endre brukerens globale valg.
+  // ÉN skriver av loop-tilstanden. Tre brytere kan slå den på (loop-knappen,
+  // A-B-loop og band-modus), og den utledes HER — knappene rører bare React-
+  // state. Tidligere skrev onLoopToggle rett i motoren mens rebuild-effekten
+  // utledet noe annet, så motoren og UI-et kunne bli uenige.
+  useEffect(() => {
+    getEngine().setLoop(loop || abLoop || bandMode)
+  }, [loop, abLoop, bandMode])
+
+  // Side-lokal lyd (D5b), del 1: marker at siden eier lyden mens den lever
+  // (AppShells globale speiling holder seg unna da), og gjenopprett det globale
+  // session-instrumentet ved unmount. Egen mount-effekt — hvis dette lå som
+  // cleanup på pageInstrument, ville hvert lyd-bytte på siden først bygge
+  // sesjons-instrumentet i et blaff.
   useEffect(() => {
     const engine = getEngine()
-    engine.setInstrument(pageInstrument)
+    engine.pageOverrideActive = true
     return () => {
+      engine.pageOverrideActive = false
       engine.setInstrument(useSession.getState().instrument)
     }
+  }, [])
+
+  // Del 2: speil valget inn i motoren — et gitar-lick spiller gitar automatisk
+  // uten å endre brukerens globale valg.
+  useEffect(() => {
+    getEngine().setInstrument(pageInstrument)
   }, [pageInstrument])
 
   const notesForKeyboard = useMemo(
@@ -238,6 +286,14 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
     [lick, targetKey, playbackHand],
   )
   const notesAll = useMemo(() => (lick ? transposedNotes(lick, targetKey) : []), [lick, targetKey])
+  // Dagens økt: slug-lista leses fra localStorage + JSON.parse. Den lå i
+  // render-kroppen, som under avspilling betyr ~60 synkrone lesninger i sekundet
+  // (currentBeat re-rendrer siden per frame). Memoisert på listCtx — den er det
+  // eneste som kan endre svaret mens siden lever.
+  const dailySlugs = useMemo(
+    () => (listCtx?.kind === 'daily' ? getDailySessionSlugs(todayKey()) : []),
+    [listCtx],
+  )
   const chords = useMemo(() => (lick ? transposedChords(lick, targetKey) : []), [lick, targetKey])
 
   // Wait-mode trainer (input-gated step-through, MIDI or click).
@@ -267,7 +323,11 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
       return
     }
     if (currentBeat < prevBeatRef.current - 0.5) {
-      recordPractice(slug, bpmRef.current)
+      // Fremgangs-skrivingen leser + skriver HELE progress-bloben synkront i
+      // localStorage, og loop-wrappen er nøyaktig den rammen der Transport
+      // starter forfra. Utsett den til etter rammen (ledig tid om nettleseren
+      // tilbyr det) — semantikken er uendret: én skriving per wrap.
+      deferOffFrame(() => recordPractice(slug, bpmRef.current))
       if (rampRef.current && bpmRef.current < 180) {
         const nb = Math.min(180, bpmRef.current + 4)
         setBpm(nb)
@@ -343,11 +403,8 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
     setBpm(v)
     getEngine().setTempo(v)
   }
-  const onLoopToggle = () => {
-    const next = !loop
-    setLoop(next)
-    getEngine().setLoop(next)
-  }
+  // Bare React-state — effekten over utleder og skriver til motoren.
+  const onLoopToggle = () => setLoop((v) => !v)
   const onSwingToggle = () => {
     const next = swing > 0 ? 0 : 0.55
     setSwing(next)
@@ -376,7 +433,7 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
 
   const navList = listCtx
     ? listCtx.kind === 'daily'
-      ? { name: 'Dagens økt', slugs: getDailySessionSlugs(todayKey()) }
+      ? { name: 'Dagens økt', slugs: dailySlugs }
       : listCtx.kind === 'path'
         ? (CURATED_PATHS.find((p) => p.id === listCtx.id) ?? null)
         : (lists.find((l) => l.id === listCtx.id) ?? null)

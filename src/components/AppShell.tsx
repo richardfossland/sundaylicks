@@ -59,8 +59,18 @@ export function AppShell({ mode, children }: { mode?: ModeId; children: React.Re
   useEffect(() => {
     loadSession()
   }, [loadSession])
+  // REKKEFØLGE-AVHENGIGHET: Practice setter en SIDE-LOKAL lyd (D5b) — et
+  // gitar-lick skal spille gitar selv om sesjons-lyden er piano. I dag rekker
+  // sesjons-hydreringen å lande før Practice monterer (Practice er dynamisk
+  // importert), så denne speilingen kommer først. Det er tilfeldig; motorens
+  // `pageOverrideActive` gjør avhengigheten eksplisitt: står flagget, eier siden
+  // lyden og vi rører den ikke.
   useEffect(() => {
-    void import('@/lib/playback').then((m) => m.getEngine().setInstrument(instrument))
+    void import('@/lib/playback').then((m) => {
+      const engine = m.getEngine()
+      if (engine.pageOverrideActive) return
+      engine.setInstrument(instrument)
+    })
   }, [instrument])
 
   return (
