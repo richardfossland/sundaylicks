@@ -12,7 +12,7 @@ import {
   getPracticeDefaults,
   setPracticeDefaults,
 } from '@/lib/prefs'
-import { collectExportData } from '@/lib/export-data'
+import { EXPORT_PREFIX, collectExportData, type StorageLike } from '@/lib/export-data'
 import { cn } from '@/lib/cn'
 
 // Onboarding-overlayet drar inn Tone via audio-unlock → last det klient-only,
@@ -76,13 +76,17 @@ export function SettingsView() {
   }
 
   const onExport = () => {
-    const bundle = collectExportData((k) => {
-      try {
-        return localStorage.getItem(k)
-      } catch {
-        return null
-      }
-    })
+    // collectExportData går selv gjennom lageret og tar med ALT under
+    // `sundaylicks_`-prefikset — samme prefiks som onReset feier, så eksport og
+    // nullstilling dekker nøyaktig det samme. Selve oppslaget av `localStorage`
+    // kan kaste når lagring er blokkert; da eksporteres en tom konvolutt.
+    let storage: StorageLike = { length: 0, key: () => null, getItem: () => null }
+    try {
+      storage = localStorage
+    } catch {
+      /* lagring blokkert — behold den tomme stumpen */
+    }
+    const bundle = collectExportData(storage)
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const d = new Date()
@@ -107,7 +111,7 @@ export function SettingsView() {
         const keys: string[] = []
         for (let i = 0; i < storage.length; i++) {
           const k = storage.key(i)
-          if (k && k.startsWith('sundaylicks_')) keys.push(k)
+          if (k && k.startsWith(EXPORT_PREFIX)) keys.push(k)
         }
         keys.forEach((k) => storage.removeItem(k))
       } catch {
