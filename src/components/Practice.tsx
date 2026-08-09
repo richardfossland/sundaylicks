@@ -19,7 +19,7 @@ import {
   SlidersHorizontal,
   Guitar,
 } from 'lucide-react'
-import type { Lick, HandFilter } from '@/types/lick'
+import type { Lick, LickNote, LickChord, HandFilter } from '@/types/lick'
 import { instrumentForLick, type InstrumentKind } from '@/lib/instruments'
 import { fetchLick } from '@/lib/licks'
 import { transposedNotes, transposedChords } from '@/lib/transpose'
@@ -33,7 +33,7 @@ import { recordPractice, todayKey } from '@/lib/progress'
 import { getDailySessionSlugs } from '@/lib/daily'
 import { useCollections } from '@/lib/collections'
 import { CURATED_PATHS } from '@/data/curated-paths'
-import { useWaitMode } from '@/lib/useWaitMode'
+import { useWaitMode, type Feedback } from '@/lib/useWaitMode'
 import { connectMidi, midiSupported, type MidiConnection } from '@/lib/midi'
 import { cn } from '@/lib/cn'
 import { useSession } from '@/lib/session'
@@ -120,7 +120,11 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
 
   const isPlaying = usePlayer((s) => s.isPlaying)
   const isLoading = usePlayer((s) => s.isLoading)
-  const currentBeat = usePlayer((s) => s.currentBeat)
+  // NB: `currentBeat` (60 Hz) abonneres BEVISST ikke her — det ville re-rendret
+  // hele denne siden per frame under avspilling. Hver forbruker av
+  // avspillingshodet er isolert i sin egen liten løvkomponent nederst i fila
+  // (LiveHero / LiveChordStrip / LivePianoRoll / LoopBoundaryWatcher), samme
+  // mønster som <LiveRoll> i bla/ReelCard.tsx.
   const metronome = usePlayer((s) => s.metronome)
   const countIn = usePlayer((s) => s.countIn)
 
@@ -301,6 +305,9 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
   const waitMode = useWaitMode(notesForKeyboard, onTrainerLoop)
   const inputRef = useRef(waitMode.input)
   inputRef.current = waitMode.input
+  // Stabil identitet gjennom ref-en, slik at det memoiserte gripebrettet/
+  // klaviaturet ikke må bygges om bare fordi Practice rendret på nytt.
+  const onInput = useCallback((midi: number) => inputRef.current(midi), [])
 
   // Toggle wait-mode: stop transport when entering, reset when leaving.
   useEffect(() => {
@@ -313,29 +320,23 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [practiceOn])
 
-  // Loop-boundary detection (auto mode): record progress + ramp tempo.
+  // Loop-boundary detection (auto mode): record progress + ramp tempo. Selve
+  // deteksjonen (som må se hver beat) bor i <LoopBoundaryWatcher> nederst i
+  // fila — den rendrer null, så tikkene koster ingen DOM her.
   const rampRef = useRef(ramp)
   rampRef.current = ramp
-  const prevBeatRef = useRef(0)
-  useEffect(() => {
-    if (!isPlaying) {
-      prevBeatRef.current = currentBeat
-      return
+  const onLoopBoundary = useCallback(() => {
+    // Fremgangs-skrivingen leser + skriver HELE progress-bloben synkront i
+    // localStorage, og loop-wrappen er nøyaktig den rammen der Transport
+    // starter forfra. Utsett den til etter rammen (ledig tid om nettleseren
+    // tilbyr det) — semantikken er uendret: én skriving per wrap.
+    deferOffFrame(() => recordPractice(slug, bpmRef.current))
+    if (rampRef.current && bpmRef.current < 180) {
+      const nb = Math.min(180, bpmRef.current + 4)
+      setBpm(nb)
+      getEngine().setTempo(nb)
     }
-    if (currentBeat < prevBeatRef.current - 0.5) {
-      // Fremgangs-skrivingen leser + skriver HELE progress-bloben synkront i
-      // localStorage, og loop-wrappen er nøyaktig den rammen der Transport
-      // starter forfra. Utsett den til etter rammen (ledig tid om nettleseren
-      // tilbyr det) — semantikken er uendret: én skriving per wrap.
-      deferOffFrame(() => recordPractice(slug, bpmRef.current))
-      if (rampRef.current && bpmRef.current < 180) {
-        const nb = Math.min(180, bpmRef.current + 4)
-        setBpm(nb)
-        getEngine().setTempo(nb)
-      }
-    }
-    prevBeatRef.current = currentBeat
-  }, [currentBeat, isPlaying, slug])
+  }, [slug])
 
   // MIDI cleanup on unmount.
   useEffect(() => () => midi?.dispose(), [midi])
@@ -444,15 +445,8 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
     if (s) router.push(`/lick/${s}?${listCtx.kind}=${listCtx.id}&i=${idx}`)
   }
 
-  // Chord-tone overlay: tones of the chord active at the current beat.
-  const overlayBeat = practiceOn ? -1 : isPlaying ? currentBeat : 0
-  const overlay = showOverlay
-    ? (() => {
-        const c =
-          chords.find((ch) => ch.t - 1e-6 <= overlayBeat && overlayBeat < ch.t + ch.d - 1e-6) ?? chords[0]
-        return c ? { root: c.r, tones: new Set(chordPitchClasses(c.r, c.q)) } : undefined
-      })()
-    : undefined
+  // Chord-tone overlay: regnes ut inne i <LiveHero>, som eier avspillingshodet
+  // (og memoiserer settet på AKKORDEN, ikke på slaget).
 
   // Whether any advanced tool is currently engaged — surfaced as a dot on the
   // "Flere verktøy" toggle so a collapsed panel never hides an active state
@@ -517,27 +511,20 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
       </header>
 
       <div className="flex flex-col gap-4">
-        {fretted ? (
-          <Fretboard
-            notes={notesForKeyboard}
-            tuning={bass ? BASS_EADG : GUITAR_STANDARD}
-            currentBeat={practiceOn ? -1 : isPlaying ? currentBeat : 0}
-            expected={practiceOn ? waitMode.expected : undefined}
-            feedback={practiceOn ? waitMode.feedback : undefined}
-            overlay={overlay}
-            onPress={(m) => inputRef.current(m)}
-          />
-        ) : (
-          <Keyboard
-            notes={notesForKeyboard}
-            currentBeat={practiceOn ? -1 : isPlaying ? currentBeat : 0}
-            expected={practiceOn ? waitMode.expected : undefined}
-            feedback={practiceOn ? waitMode.feedback : undefined}
-            overlay={overlay}
-            onKeyPress={(m) => inputRef.current(m)}
-          />
-        )}
-        <ChordStrip chords={chords} beats={lick.beats} currentBeat={practiceOn ? -1 : currentBeat} />
+        <LoopBoundaryWatcher isPlaying={isPlaying} onLoopBoundary={onLoopBoundary} />
+        <LiveHero
+          fretted={fretted}
+          tuning={bass ? BASS_EADG : GUITAR_STANDARD}
+          notes={notesForKeyboard}
+          chords={chords}
+          showOverlay={showOverlay}
+          practiceOn={practiceOn}
+          isPlaying={isPlaying}
+          expected={practiceOn ? waitMode.expected : undefined}
+          feedback={practiceOn ? waitMode.feedback : undefined}
+          onPress={onInput}
+        />
+        <LiveChordStrip chords={chords} beats={lick.beats} practiceOn={practiceOn} />
 
         {/* Grep-panel (D7) — kun for gitar-licks med akkorder */}
         {gitar && chords.length > 0 && <GrepPanel chords={chords} />}
@@ -568,11 +555,11 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
         {view === 'tab' ? (
           <Tab notes={notesAll} beats={lick.beats} strings={bass ? 4 : 6} />
         ) : view === 'roll' ? (
-          <PianoRoll
+          <LivePianoRoll
             notes={notesAll}
             hand={playbackHand}
             beats={lick.beats}
-            currentBeat={practiceOn ? -1 : currentBeat}
+            practiceOn={practiceOn}
             loopRange={abLoop ? { a: loopA, b: loopB } : null}
           />
         ) : (
@@ -812,6 +799,139 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
         </div>
       </div>
     </main>
+  )
+}
+
+// ── Løvkomponenter for avspillingshodet (60 Hz) ──────────────────────────────
+// Alt som må se `currentBeat` bor her nede, én abonnent per forbruker. Practice
+// selv abonnerer IKKE, så resten av siden (header, transport, verktøypanel …)
+// rendres bare når noe faktisk endrer seg — ikke 60 ganger i sekundet. Samme
+// isolasjonsmønster som <LiveRoll> i app/bla/ReelCard.tsx.
+
+/**
+ * Loop-grense-deteksjon. Rendrer null: den finnes bare for å se hver beat uten
+ * å dra resten av treet med seg. Logikken er uendret — et hopp bakover i
+ * beat-tallet betyr at loopen startet på nytt.
+ */
+function LoopBoundaryWatcher({
+  isPlaying,
+  onLoopBoundary,
+}: {
+  isPlaying: boolean
+  onLoopBoundary: () => void
+}) {
+  const currentBeat = usePlayer((s) => s.currentBeat)
+  const prevBeatRef = useRef(0)
+  const onLoopRef = useRef(onLoopBoundary)
+  onLoopRef.current = onLoopBoundary
+  useEffect(() => {
+    if (!isPlaying) {
+      prevBeatRef.current = currentBeat
+      return
+    }
+    if (currentBeat < prevBeatRef.current - 0.5) onLoopRef.current()
+    prevBeatRef.current = currentBeat
+  }, [currentBeat, isPlaying])
+  return null
+}
+
+/** Hero-en (gripebrett eller klaviatur) + akkordtone-overlegget. */
+function LiveHero({
+  fretted,
+  tuning,
+  notes,
+  chords,
+  showOverlay,
+  practiceOn,
+  isPlaying,
+  expected,
+  feedback,
+  onPress,
+}: {
+  fretted: boolean
+  tuning: number[]
+  notes: LickNote[]
+  chords: LickChord[]
+  showOverlay: boolean
+  practiceOn: boolean
+  isPlaying: boolean
+  expected?: Set<number>
+  feedback?: Map<number, Feedback>
+  onPress: (midi: number) => void
+}) {
+  const currentBeat = usePlayer((s) => s.currentBeat)
+  const beat = practiceOn ? -1 : isPlaying ? currentBeat : 0
+
+  // Akkorden som lyder nå. Referansen er den SAMME gjennom hele akkordens
+  // varighet, så useMemo under allokerer ett Set per akkordskifte — ikke ett
+  // per frame, slik den gamle IIFE-en i Practice gjorde.
+  const chord = showOverlay
+    ? (chords.find((ch) => ch.t - 1e-6 <= beat && beat < ch.t + ch.d - 1e-6) ?? chords[0])
+    : undefined
+  const overlay = useMemo(
+    () => (chord ? { root: chord.r, tones: new Set(chordPitchClasses(chord.r, chord.q)) } : undefined),
+    [chord],
+  )
+
+  return fretted ? (
+    <Fretboard
+      notes={notes}
+      tuning={tuning}
+      currentBeat={beat}
+      expected={expected}
+      feedback={feedback}
+      overlay={overlay}
+      onPress={onPress}
+    />
+  ) : (
+    <Keyboard
+      notes={notes}
+      currentBeat={beat}
+      expected={expected}
+      feedback={feedback}
+      overlay={overlay}
+      onKeyPress={onPress}
+    />
+  )
+}
+
+/** Akkordstripa — markerer akkorden som lyder. */
+function LiveChordStrip({
+  chords,
+  beats,
+  practiceOn,
+}: {
+  chords: LickChord[]
+  beats: number
+  practiceOn: boolean
+}) {
+  const currentBeat = usePlayer((s) => s.currentBeat)
+  return <ChordStrip chords={chords} beats={beats} currentBeat={practiceOn ? -1 : currentBeat} />
+}
+
+/** Pianorullen — bare avspillingslinja flytter seg (PianoRoll memoiserer resten). */
+function LivePianoRoll({
+  notes,
+  hand,
+  beats,
+  practiceOn,
+  loopRange,
+}: {
+  notes: LickNote[]
+  hand: HandFilter
+  beats: number
+  practiceOn: boolean
+  loopRange: { a: number; b: number } | null
+}) {
+  const currentBeat = usePlayer((s) => s.currentBeat)
+  return (
+    <PianoRoll
+      notes={notes}
+      hand={hand}
+      beats={beats}
+      currentBeat={practiceOn ? -1 : currentBeat}
+      loopRange={loopRange}
+    />
   )
 }
 

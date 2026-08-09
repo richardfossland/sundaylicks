@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import Link from 'next/link'
 import { Check, ArrowLeftRight, Guitar, AudioLines } from 'lucide-react'
 import type { Lick } from '@/types/lick'
@@ -6,7 +7,10 @@ import { KEY_NAMES } from '@/lib/music'
 import { FavoriteButton } from './FavoriteButton'
 import { DifficultyBadge } from './DifficultyBadge'
 
-export function LickCard({
+// Memoisert: /ove rendrer opptil 328 kort, og hvert tastetrykk i søket ville
+// ellers re-rendret alle (~5 000 element-avstemminger per anslag). Alle props
+// er primitiver eller stabile Lick-referanser fra den hentede lista.
+export const LickCard = memo(function LickCard({
   lick,
   practiced,
   bestBpm,
@@ -86,4 +90,4 @@ export function LickCard({
       </div>
     </Link>
   )
-}
+})

@@ -36,9 +36,17 @@ function loadFallbackLicks(): Promise<Lick[]> {
  * otherwise (or on any error / empty table) returns the bundled seed data so the
  * app is always functional in dev and degrades gracefully in production.
  */
+// Vellykkede Supabase-hentinger caches i 5 min: /ove → lick → tilbake → /bla
+// betalte tidligere hele korpuset (~60–100 KB gzip) på nytt per montering.
+// TTL-en holder admin-publiserte licks synlige uten hard reload. Feil caches
+// aldri — neste montering prøver på nytt.
+const LICKS_TTL_MS = 5 * 60 * 1000
+let licksCache: { at: number; licks: Lick[] } | null = null
+
 export async function fetchLicks(): Promise<Lick[]> {
   const supabase = createClient()
   if (!supabase) return loadFallbackLicks()
+  if (licksCache && Date.now() - licksCache.at < LICKS_TTL_MS) return licksCache.licks
   try {
     const { data, error } = await supabase
       .from('licks')
@@ -47,6 +55,7 @@ export async function fetchLicks(): Promise<Lick[]> {
       .order('difficulty', { ascending: true })
       .order('name', { ascending: true })
     if (error || !data || data.length === 0) return loadFallbackLicks()
+    licksCache = { at: Date.now(), licks: data as Lick[] }
     return data as Lick[]
   } catch {
     return loadFallbackLicks()

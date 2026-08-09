@@ -26,17 +26,23 @@ export function PianoRoll({ notes, hand, beats, currentBeat, loopRange }: Props)
   const rows = hi - lo + 1
   const height = rows * ROW_H
   const width = beats * BEAT_W
-  const yOf = (p: number) => (hi - p) * ROW_H
 
-  return (
-    <div className="scroll-x rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
-      <svg width={width} height={height} className="block" role="img" aria-label="Pianorull">
+  // Alt bortsett fra avspillingslinja er statisk: rader, rutenett, noter og
+  // A-B-skyggen endrer seg bare når licken/hånda/loopen gjør det. Rullen tegnes
+  // 60 ganger i sekundet under avspilling (både her og i reelen), så disse
+  // lagene memoiseres — da er per-frame-jobben ÉN linje.
+  const loopA = loopRange?.a ?? null
+  const loopB = loopRange?.b ?? null
+  const layers = useMemo(() => {
+    const yOf = (p: number) => (hi - p) * ROW_H
+    return (
+      <>
         {/* A-B section-loop shading */}
-        {loopRange && (
+        {loopA !== null && loopB !== null && (
           <rect
-            x={loopRange.a * BEAT_W}
+            x={loopA * BEAT_W}
             y={0}
-            width={Math.max(0, (loopRange.b - loopRange.a) * BEAT_W)}
+            width={Math.max(0, (loopB - loopA) * BEAT_W)}
             height={height}
             fill="var(--color-amber)"
             opacity={0.1}
@@ -87,6 +93,14 @@ export function PianoRoll({ notes, hand, beats, currentBeat, loopRange }: Props)
             />
           )
         })}
+      </>
+    )
+  }, [notes, hand, beats, loopA, loopB, lo, hi, rows, height, width])
+
+  return (
+    <div className="scroll-x rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
+      <svg width={width} height={height} className="block" role="img" aria-label="Pianorull">
+        {layers}
         {/* Playhead */}
         <line
           x1={currentBeat * BEAT_W}

@@ -10,7 +10,7 @@
 // section renders a light, same-height placeholder so the scroll-snap geometry
 // (én full-height seksjon per lick) is identical whether or not the card is realised.
 
-import { useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import Link from 'next/link'
 import { Check, RotateCcw, Volume2, VolumeX, Loader2, Guitar, AudioLines } from 'lucide-react'
 import type { Lick } from '@/types/lick'
@@ -48,7 +48,10 @@ function LiveRoll({ notes, beats }: { notes: Lick['notes']; beats: number }) {
   return <PianoRoll notes={notes} hand="both" beats={beats} currentBeat={currentBeat} />
 }
 
-export function ReelCard({
+// Memoisert: hvert snap i reelen re-rendret ellers alle 328 kort (~1 300
+// element-kreasjoner per snap, ×6–8/sek under rask sveiping). Props er
+// primitiver + stabile referanser (onReplay er ref-stabil i useReelPlayer).
+export const ReelCard = memo(function ReelCard({
   lick,
   index,
   total,
@@ -178,4 +181,4 @@ export function ReelCard({
       </div>
     </div>
   )
-}
+})

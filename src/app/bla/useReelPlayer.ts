@@ -18,7 +18,7 @@
 //     alt annet med brukerens sesjons-lyd (instrumentForLick). Sendes eksplisitt
 //     ved hvert bygg, ellers ville et bass-kort «smitte» på neste piano-kort.
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import * as Tone from 'tone'
 import type { Lick } from '@/types/lick'
 import { getEngine } from '@/lib/playback'
@@ -114,13 +114,18 @@ export function useReelPlayer({ lick, targetKey, autoplay, enabled }: Options): 
     }
   }, [])
 
+  // Ref-stabil: identiteten overlever kortbytter, så det memoiserte ReelCard
+  // ikke bustes for alle 328 kort hver gang aktivt kort endres.
+  const replayRef = useRef({ lick, targetKey })
+  replayRef.current = { lick, targetKey }
   const replay = useCallback(() => {
-    if (!lick) return
+    const { lick: l, targetKey: k } = replayRef.current
+    if (!l) return
     const engine = getEngine()
     engine.stop()
-    engine.build(lick, { targetKey, hand: 'both', bpm: lick.default_bpm, loop: false })
+    engine.build(l, { targetKey: k, hand: 'both', bpm: l.default_bpm, loop: false })
     void engine.play()
-  }, [lick, targetKey])
+  }, [])
 
   return { soundReady, replay, isLoading }
 }

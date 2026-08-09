@@ -11,7 +11,7 @@
 //                       spill); pilleikonet viser status for aktiv variant.
 //   • CircleDemo      — kvintsirkel (klikk toneart → hør tonika-treklang).
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Loader2, Play, Square } from 'lucide-react'
 import type { GlossaryDemo, DemoChord, DemoPhrase } from '@/data/glossary-demos'
 import type { Key } from '@/lib/theory/keys'
@@ -105,11 +105,22 @@ function soundingAt(phrase: DemoPhrase, beat: number): Set<number> {
 }
 
 function PhraseView({ phrase, playing, player, playKey }: { phrase: DemoPhrase; playing: boolean; player: DemoPlayer; playKey: string }) {
-  const currentBeat = usePlayer((s) => s.currentBeat)
+  // 60 Hz-abonnementet bor i LivePhraseBody og monteres KUN for demoen som
+  // faktisk spiller — før re-rendret hver ekspanderte oppføring på siden per
+  // frame så lenge én av dem spilte.
   const isThis = player.playingKey === playKey
-  const beat = playing && isThis ? currentBeat : -1
+  if (playing && isThis) return <LivePhraseBody phrase={phrase} />
+  return <PhraseBody phrase={phrase} beat={-1} />
+}
+
+function LivePhraseBody({ phrase }: { phrase: DemoPhrase }) {
+  const currentBeat = usePlayer((s) => s.currentBeat)
+  return <PhraseBody phrase={phrase} beat={currentBeat} />
+}
+
+function PhraseBody({ phrase, beat }: { phrase: DemoPhrase; beat: number }) {
   const chords = phrase.chords ?? []
-  const allPitches = [...new Set(phrase.notes.map((n) => n.p))]
+  const allPitches = useMemo(() => [...new Set(phrase.notes.map((n) => n.p))], [phrase])
   const active = beat >= 0 ? soundingAt(phrase, beat) : undefined
   const activeChord = chords.find((c) => c.t - EPS <= beat && beat < c.t + c.d - EPS) ?? chords[0]
   return (

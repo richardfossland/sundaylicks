@@ -83,6 +83,8 @@ export function BlaView() {
   const ordered = useMemo(() => (seed && licks ? reelOrder(licks, seed) : null), [seed, licks])
   const ready = ordered !== null && headerH > 0
   const total = ordered?.length ?? 0
+  // O(1) per kort i stedet for O(n) includes ×328 per snap.
+  const practicedSet = useMemo(() => new Set(progress.practiced), [progress])
 
   // Clamp a possibly-stale restored index against the current library size.
   const safeActive = total > 0 ? Math.min(activeIndex, total - 1) : 0
@@ -212,7 +214,7 @@ export function BlaView() {
             total={total}
             active={i === safeActive}
             near={Math.abs(i - safeActive) <= 1}
-            practiced={progress.practiced.includes(lick.slug)}
+            practiced={practicedSet.has(lick.slug)}
             targetKey={sessionKey.root}
             soundReady={player.soundReady}
             autoplay={autoplay}
