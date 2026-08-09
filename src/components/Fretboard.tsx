@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { memo, useCallback, useMemo, useRef } from 'react'
 import type { LickNote, Hand } from '@/types/lick'
 import type { Feedback } from '@/lib/useWaitMode'
 import {
@@ -52,7 +52,7 @@ interface Props {
   onPress: (midi: number) => void
 }
 
-export function Fretboard({
+function FretboardImpl({
   notes,
   currentBeat,
   tuning = GUITAR_STANDARD,
@@ -97,24 +97,35 @@ export function Fretboard({
   }, [expected, notes, positions, tuning])
 
   // En celles prikk-senter, i det gutter-forskjøvne koordinatrommet.
-  const dotAt = (s: number, f: number) => {
-    const { x, y } = layout.posOf(s, f)
-    return { cx: f === 0 ? GUTTER / 2 : GUTTER + x, cy: y }
-  }
+  const dotAt = useCallback(
+    (s: number, f: number) => {
+      const { x, y } = layout.posOf(s, f)
+      return { cx: f === 0 ? GUTTER / 2 : GUTTER + x, cy: y }
+    },
+    [layout],
+  )
 
-  const cells: { s: number; f: number; midi: number }[] = []
-  for (let s = 0; s < tuning.length; s++) {
-    for (let f = 0; f <= FRETS; f++) cells.push({ s, f, midi: tuning[s] + f })
-  }
+  // 96 celler (6 × 16) — ren geometri, avhenger kun av stemmingen. Ble tidligere
+  // bygget på nytt ved hver render, altså 60 ganger i sekundet under avspilling.
+  const cells = useMemo(() => {
+    const out: { s: number; f: number; midi: number }[] = []
+    for (let s = 0; s < tuning.length; s++) {
+      for (let f = 0; f <= FRETS; f++) out.push({ s, f, midi: tuning[s] + f })
+    }
+    return out
+  }, [tuning])
 
-  return (
-    <div className="scroll-x rounded-xl border border-[var(--color-border)] bg-[var(--color-raised)] p-3">
-      <svg
-        viewBox={`0 0 ${GUTTER + BOARD_W} ${H}`}
-        className="block h-auto min-w-[560px] select-none"
-        role="group"
-        aria-label="Gripebrett — klikk på streng og bånd for å spille"
-      >
+  // Klikklaget kalles gjennom en ref, slik at det kan memoiseres på geometrien
+  // alene — `onPress` får ny identitet ved hver render hos kalleren.
+  const onPressRef = useRef(onPress)
+  onPressRef.current = onPress
+  const press = useCallback((midi: number) => onPressRef.current(midi), [])
+
+  // Statisk brett-tegning: sadel, båndlinjer, posisjonsmarkører, båndnummer og
+  // strenger. Endres bare med geometrien — aldri med slaget.
+  const chrome = useMemo(
+    () => (
+      <>
         {/* Sadel + båndlinjer */}
         <line
           x1={GUTTER}
@@ -141,15 +152,20 @@ export function Fretboard({
           const x = GUTTER + (layout.fretX[f - 1] + layout.fretX[f]) / 2
           return <circle key={f} cx={x} cy={H / 2} r={4} fill="var(--color-border)" />
         })}
-        {(() => {
-          const x = GUTTER + (layout.fretX[11] + layout.fretX[12]) / 2
-          return (
-            <g>
-              <circle cx={x} cy={H / 2 - 24} r={4} fill="var(--color-border)" />
-              <circle cx={x} cy={H / 2 + 24} r={4} fill="var(--color-border)" />
-            </g>
-          )
-        })()}
+        <g>
+          <circle
+            cx={GUTTER + (layout.fretX[11] + layout.fretX[12]) / 2}
+            cy={H / 2 - 24}
+            r={4}
+            fill="var(--color-border)"
+          />
+          <circle
+            cx={GUTTER + (layout.fretX[11] + layout.fretX[12]) / 2}
+            cy={H / 2 + 24}
+            r={4}
+            fill="var(--color-border)"
+          />
+        </g>
         {layout.fretX.slice(1).map((x, i) => (
           <text
             key={i}
@@ -185,10 +201,42 @@ export function Fretboard({
             </text>
           </g>
         ))}
+      </>
+    ),
+    [layout, tuning],
+  )
 
-        {/* Akkordtone-overlegg (D4b): bånd 0–12, prikk der pitch-klassen er en akkordtone */}
-        {overlay &&
-          cells.map(({ s, f, midi }) => {
+  // Klikklag — én gjennomsiktig celle per streng × bånd (0 = gutteren). Rent
+  // statisk geometri; tidligere ble alle 96 rektanglene laget på nytt per frame.
+  const clickLayer = useMemo(
+    () =>
+      cells.map(({ s, f, midi }) => {
+        const x0 = f === 0 ? 0 : GUTTER + layout.fretX[f - 1]
+        const x1 = f === 0 ? GUTTER : GUTTER + layout.fretX[f]
+        const rowH = tuning.length > 1 ? Math.abs(layout.stringY[0] - layout.stringY[1]) : H
+        return (
+          <rect
+            key={`hit-${s}:${f}`}
+            x={x0}
+            y={layout.stringY[s] - rowH / 2}
+            width={x1 - x0}
+            height={rowH}
+            fill="transparent"
+            className="cursor-pointer"
+            role="button"
+            aria-label={`${noteName(midi)} — streng ${s + 1}, bånd ${f}`}
+            onPointerDown={() => press(midi)}
+          />
+        )
+      }),
+    [cells, layout, tuning, press],
+  )
+
+  // Akkordtone-overlegget (D4b) skifter bare når akkorden skifter, ikke per slag.
+  const overlayLayer = useMemo(
+    () =>
+      overlay
+        ? cells.map(({ s, f, midi }) => {
             if (f > 12) return null
             if (!overlay.tones.has(pitchClass(midi))) return null
             const isRoot = pitchClass(midi) === pitchClass(overlay.root)
@@ -204,7 +252,23 @@ export function Fretboard({
                 pointerEvents="none"
               />
             )
-          })}
+          })
+        : null,
+    [overlay, cells, dotAt],
+  )
+
+  return (
+    <div className="scroll-x rounded-xl border border-[var(--color-border)] bg-[var(--color-raised)] p-3">
+      <svg
+        viewBox={`0 0 ${GUTTER + BOARD_W} ${H}`}
+        className="block h-auto min-w-[560px] select-none"
+        role="group"
+        aria-label="Gripebrett — klikk på streng og bånd for å spille"
+      >
+        {chrome}
+
+        {/* Akkordtone-overlegg (D4b): bånd 0–12, prikk der pitch-klassen er en akkordtone */}
+        {overlayLayer}
 
         {/* Tilstandsprikker (under klikklaget): aktiv avspilling, mål, tilbakemelding */}
         {cells.map(({ s, f, midi }) => {
@@ -238,26 +302,13 @@ export function Fretboard({
         })}
 
         {/* Klikklag — én gjennomsiktig celle per streng × bånd (0 = gutteren) */}
-        {cells.map(({ s, f, midi }) => {
-          const x0 = f === 0 ? 0 : GUTTER + layout.fretX[f - 1]
-          const x1 = f === 0 ? GUTTER : GUTTER + layout.fretX[f]
-          const rowH = tuning.length > 1 ? Math.abs(layout.stringY[0] - layout.stringY[1]) : H
-          return (
-            <rect
-              key={`hit-${s}:${f}`}
-              x={x0}
-              y={layout.stringY[s] - rowH / 2}
-              width={x1 - x0}
-              height={rowH}
-              fill="transparent"
-              className="cursor-pointer"
-              role="button"
-              aria-label={`${noteName(midi)} — streng ${s + 1}, bånd ${f}`}
-              onPointerDown={() => onPress(midi)}
-            />
-          )
-        })}
+        {clickLayer}
       </svg>
     </div>
   )
 }
+
+// memo: brettet er dyrt å bygge (96 celler × flere lag). Med stabile props fra
+// <LiveHero> hoppes hele renderen over når bare noe ANNET på øvesiden endrer seg
+// — og under vent-modus/stopp, der `currentBeat` står stille, hoppes tikkene òg.
+export const Fretboard = memo(FretboardImpl)

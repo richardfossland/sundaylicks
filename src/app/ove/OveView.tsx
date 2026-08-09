@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import {
@@ -235,11 +235,18 @@ export function OveView() {
     return CATEGORY_ORDER.filter((c) => present.has(c))
   }, [licks])
 
+  // O(1)-oppslag i stedet for O(n) `includes` per kort (opptil ~108 000
+  // streng-sammenlikninger per render for en storbruker med alt øvd).
+  const practicedSet = useMemo(() => new Set(progress.practiced), [progress])
+  // Utsatt søkeverdi: tastingen holder seg responsiv mens 328-korts-grida
+  // får re-rendre i bakgrunnsprioritet.
+  const deferredQuery = useDeferredValue(query)
+
   const filtered = useMemo(() => {
     if (activeList) {
       return activeList.slugs.map((s) => bySlug.get(s)).filter(Boolean) as Lick[]
     }
-    const q = query.trim().toLowerCase()
+    const q = deferredQuery.trim().toLowerCase()
     const idx = new Map(licks.map((l, i) => [l.slug, i]))
     const out = licks.filter(
       (l) =>
@@ -262,7 +269,7 @@ export function OveView() {
       newest: (a, b) => idx.get(b.slug)! - idx.get(a.slug)!,
     }
     return [...out].sort(cmp[sort])
-  }, [licks, activeList, showFavs, favorites, cat, genre, diff, inst, query, sort, bySlug])
+  }, [licks, activeList, showFavs, favorites, cat, genre, diff, inst, deferredQuery, sort, bySlug])
 
   const activeFilterCount =
     (cat !== 'all' ? 1 : 0) + (genre !== 'all' ? 1 : 0) + (diff !== 'all' ? 1 : 0) + (inst !== 'all' ? 1 : 0)
@@ -517,7 +524,7 @@ export function OveView() {
             <LickCard
               key={l.slug}
               lick={l}
-              practiced={progress.practiced.includes(l.slug)}
+              practiced={practicedSet.has(l.slug)}
               bestBpm={progress.bestBpm[l.slug]}
             />
           ))}
