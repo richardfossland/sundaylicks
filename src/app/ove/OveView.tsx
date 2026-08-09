@@ -15,7 +15,7 @@ import {
   X,
 } from 'lucide-react'
 import type { Lick, Category, Genre, Difficulty } from '@/types/lick'
-import { FALLBACK_LICKS, fetchLicks } from '@/lib/licks'
+import { fetchLicks } from '@/lib/licks'
 import { getProgress, type Progress } from '@/lib/progress'
 import { useCollections } from '@/lib/collections'
 import { LickCard } from '@/components/LickCard'
@@ -135,7 +135,8 @@ export function OveView() {
   const initialGenre = searchParams.get('genre')
   const initialList = searchParams.get('list')
 
-  const [licks, setLicks] = useState<Lick[]>(FALLBACK_LICKS)
+  const [licks, setLicks] = useState<Lick[]>([])
+  const [licksLoaded, setLicksLoaded] = useState(false)
   const [view, setView] = useState<ViewTab>('all')
   const [mineTab, setMineTab] = useState<MineTab>('favs')
   const [cat, setCat] = useState<CatFilter>(isCategory(initialCat) ? initialCat : 'all')
@@ -163,7 +164,9 @@ export function OveView() {
   useEffect(() => {
     let alive = true
     fetchLicks().then((rows) => {
-      if (alive) setLicks(rows)
+      if (!alive) return
+      setLicks(rows)
+      setLicksLoaded(true)
     })
     setProgress(getProgress())
     loadCollections()
@@ -489,7 +492,18 @@ export function OveView() {
       )}
 
       {/* Grid */}
-      {filtered.length === 0 ? (
+      {!licksLoaded ? (
+        // Skjelett mens biblioteket lastes — uten dette ville et tomt bibliotek
+        // først vist «Ingen licks matcher filtrene», som er direkte feil.
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 xl:gap-5">
+          {Array.from({ length: 10 }, (_, i) => (
+            <div
+              key={i}
+              className="h-40 animate-pulse rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
+            />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
         <p className="py-16 text-center text-[var(--color-muted)]">
           {showFavs
             ? 'Ingen favoritter enda — trykk hjertet på en lick.'

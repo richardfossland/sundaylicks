@@ -7,7 +7,7 @@ import { ArrowLeft, Check, GraduationCap } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { GlossaryText } from '@/components/glossary/GlossaryText'
 import { CURATED_PATHS } from '@/data/curated-paths'
-import { FALLBACK_LICKS, fetchLicks } from '@/lib/licks'
+import { fetchLicks } from '@/lib/licks'
 import { getProgress, type Progress } from '@/lib/progress'
 import { GENRE_LABEL, DIFFICULTY_LABEL } from '@/lib/labels'
 import { cn } from '@/lib/cn'
@@ -24,13 +24,18 @@ export default function KursDetailPage() {
   const params = useParams<{ id: string }>()
   const path = CURATED_PATHS.find((p) => p.id === params.id)
 
-  const [licks, setLicks] = useState<Lick[]>(FALLBACK_LICKS)
+  // Fremdriften (cp) kommer fra CURATED_PATHS + lokal progresjon, ikke fra
+  // licks — biblioteket bidrar bare med navn/merkelapper på hvert steg.
+  const [licks, setLicks] = useState<Lick[]>([])
+  const [licksLoaded, setLicksLoaded] = useState(false)
   const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {}, lastPracticed: {} })
 
   useEffect(() => {
     let alive = true
     fetchLicks().then((rows) => {
-      if (alive) setLicks(rows)
+      if (!alive) return
+      setLicks(rows)
+      setLicksLoaded(true)
     })
     setProgress(getProgress())
     return () => {
@@ -119,7 +124,13 @@ export default function KursDetailPage() {
                     {done ? <Check className="h-4 w-4" /> : i + 1}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-display text-base text-[var(--color-ivory)]">{lick?.name ?? slug}</p>
+                    {licksLoaded ? (
+                      <p className="truncate font-display text-base text-[var(--color-ivory)]">{lick?.name ?? slug}</p>
+                    ) : (
+                      // Plassholder mens navnene lastes — bedre enn å blinke
+                      // den rå slug-en først.
+                      <div className="h-5 w-48 max-w-full animate-pulse rounded bg-[var(--color-raised)]" />
+                    )}
                     {lick && (
                       <p className="mt-0.5 truncate text-sm text-[var(--color-muted)]">
                         {GENRE_LABEL[lick.genre]} · {DIFFICULTY_LABEL[lick.difficulty]}
