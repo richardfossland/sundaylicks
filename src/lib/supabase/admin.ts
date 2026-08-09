@@ -26,13 +26,38 @@ export function createAdminClient() {
   })
 }
 
-/** Timing-safe-ish check of the admin password against ADMIN_PASSWORD. */
-export function checkAdminPassword(supplied: string | null): 'ok' | 'unset' | 'bad' {
+/**
+ * Hvor lenge et mislykket admin-forsøk holdes igjen før svaret sendes.
+ * Gjør gjettemaskiner tregere (og gjør samtidig responstiden mindre
+ * informativ). Rutene venter så lenge FØR de svarer 401.
+ */
+export const FAILED_AUTH_DELAY_MS = 300
+
+const encoder = new TextEncoder()
+
+/** SHA-256 av en streng — alltid 32 bytes, uansett hvor lang inndata er. */
+async function digest(value: string): Promise<Uint8Array> {
+  return new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(value)))
+}
+
+/**
+ * Konstant-tids sjekk av admin-passordet mot ADMIN_PASSWORD.
+ *
+ * ⚠️ Den gamle utgaven kortsluttet på `supplied.length !== expected.length` og
+ * på tom verdi. Da lekket svartiden hvor langt det riktige passordet er, og en
+ * angriper kunne finne lengden før hen begynte å gjette tegn. Nå sammenlignes
+ * SHA-256-summene i stedet: de er alltid 32 bytes, så løkka gjør nøyaktig like
+ * mye arbeid uansett hva som sendes inn — verken lengde eller hvor tidlig
+ * første avvik kommer er synlig utenfra.
+ *
+ * (Digest, ikke HMAC: hensikten er en fastbreddes sammenligning, ikke å skjule
+ * passordet — begge sider er allerede kjent for serveren.)
+ */
+export async function checkAdminPassword(supplied: string | null): Promise<'ok' | 'unset' | 'bad'> {
   const expected = process.env.ADMIN_PASSWORD
   if (!expected) return 'unset'
-  if (!supplied) return 'bad'
-  if (supplied.length !== expected.length) return 'bad'
+  const [a, b] = await Promise.all([digest(supplied ?? ''), digest(expected)])
   let diff = 0
-  for (let i = 0; i < expected.length; i++) diff |= supplied.charCodeAt(i) ^ expected.charCodeAt(i)
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i]
   return diff === 0 ? 'ok' : 'bad'
 }
