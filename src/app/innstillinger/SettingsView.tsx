@@ -118,6 +118,11 @@ export function SettingsView() {
         /* storage blocked — ignore */
       }
     }
+    // Hard omlasting med VILJE: all lagret tilstand er nettopp slettet, men
+    // zustand-butikkene lever fortsatt i minnet. En `router.push('/')` ville
+    // beholdt dem og umiddelbart skrevet dem tilbake til storage — altså gjort
+    // «nullstill alt» virkningsløs. Derfor location.href, ikke ruteren.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.href = '/'
   }
 

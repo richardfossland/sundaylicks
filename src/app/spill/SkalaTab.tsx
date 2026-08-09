@@ -29,7 +29,6 @@ import {
 } from '@/lib/theory/scale-licks'
 import { MiniKeyboard } from '@/components/glossary/MiniKeyboard'
 import { SpiceChordPicker, type ChordChoice } from '@/components/SpiceChordPicker'
-import { Term } from '@/components/glossary/Term'
 import { KEY_NAMES, chordLabel, pitchClass } from '@/lib/music'
 import { ACCENT_CLASSES } from '@/lib/modes'
 import { loadViewState, saveViewState } from '@/lib/view-state'
@@ -140,7 +139,6 @@ export function SkalaTab() {
       if (!useSession.getState().hydrated) pinnedChordRef.current = true
     }
     hydratedRef.current = true
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Lagre ved hver endring når hydrert (re-stempler TTL). Aldri preview/playingId.

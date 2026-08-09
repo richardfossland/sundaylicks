@@ -16,7 +16,7 @@ import { describe, expect, it } from 'vitest'
 import { SEED_GITAR_LICKS } from '@/data/seed-licks-gitar'
 import { SEED_BASS_LICKS } from '@/data/seed-licks-bass'
 import { transposedPlayableNotes } from './transpose'
-import { fretPositions, MAX_FRET, TUNING_FOR } from './guitar/fretting'
+import { fretPositions, MAX_FRET, TUNING_FOR } from './fretted/fretting'
 import type { Lick } from '@/types/lick'
 
 const FRETTED = [...SEED_GITAR_LICKS, ...SEED_BASS_LICKS] as unknown as Lick[]

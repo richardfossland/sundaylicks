@@ -1,6 +1,11 @@
-# CI — runs the local `npm run check` gate (tsc + vitest) plus the OpenNext
-# Worker build, so PRs catch type/logic regressions and deploy-time bundling
-# breaks. (No Cloudflare auth needed: build only, no deploy.)
+# CI — runs the local `npm run check` gate (tsc + eslint + vitest) plus the
+# OpenNext Worker build, so PRs catch type/lint/logic regressions and
+# deploy-time bundling breaks. (No Cloudflare auth needed: build only, no
+# deploy.) Lint trenger derfor INGEN egen jobb — `check` er porten.
+#
+# Node-versjonen leses fra .nvmrc, så CI og lokal maskin ikke kan gli fra
+# hverandre (package.json `engines` krever ≥ 22 — seed-skriptet står på Nodes
+# innebygde type-stripping).
 name: ci
 on:
   push:
@@ -14,7 +19,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: npm run check
@@ -25,7 +30,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: npm run cf:build

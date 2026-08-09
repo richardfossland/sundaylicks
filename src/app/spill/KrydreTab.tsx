@@ -170,7 +170,6 @@ export function KrydreTab() {
       if (!useSession.getState().hydrated) pinnedChordRef.current = true
     }
     hydratedRef.current = true
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Persist on every change once hydrated (re-stamps the TTL). Never `preview`.
@@ -395,7 +394,7 @@ export function KrydreTab() {
               </button>
             </div>
             <div className="mb-5">
-              <ChordStrip chords={progressionChords} beats={progression.length * 4} currentBeat={-1} />
+              <ChordStrip chords={progressionChords} currentBeat={-1} />
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {progressionSuggestions.map(({ step, lick: l }) => (

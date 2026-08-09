@@ -37,7 +37,7 @@ import { useWaitMode, type Feedback } from '@/lib/useWaitMode'
 import { connectMidi, midiSupported, type MidiConnection } from '@/lib/midi'
 import { cn } from '@/lib/cn'
 import { useSession } from '@/lib/session'
-import { BASS_EADG, GUITAR_STANDARD } from '@/lib/guitar/fretting'
+import { BASS_EADG, GUITAR_STANDARD } from '@/lib/fretted/fretting'
 import { Keyboard } from './Keyboard'
 import { Fretboard } from './Fretboard'
 import { PianoRoll } from './PianoRoll'
@@ -207,6 +207,10 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
     return () => {
       alive = false
     }
+    // Bevisst smal: effekten skal hente licken på nytt KUN når licken endres.
+    // `loadCollections` er zustand-butikkens stabile `load`, men å ta den med
+    // ville gjort en butikk-remount til en ny lick-henting.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, lickProp])
 
   // Reflect practice state back into the URL (after the initial load applied it).
@@ -526,7 +530,7 @@ export function Practice({ slug, lick: lickProp }: PracticeProps) {
           feedback={practiceOn ? waitMode.feedback : undefined}
           onPress={onInput}
         />
-        <LiveChordStrip chords={chords} beats={lick.beats} practiceOn={practiceOn} />
+        <LiveChordStrip chords={chords} practiceOn={practiceOn} />
 
         {/* Grep-panel (D7) — kun for gitar-licks med akkorder */}
         {gitar && chords.length > 0 && <GrepPanel chords={chords} />}
@@ -905,17 +909,9 @@ function LiveHero({
 }
 
 /** Akkordstripa — markerer akkorden som lyder. */
-function LiveChordStrip({
-  chords,
-  beats,
-  practiceOn,
-}: {
-  chords: LickChord[]
-  beats: number
-  practiceOn: boolean
-}) {
+function LiveChordStrip({ chords, practiceOn }: { chords: LickChord[]; practiceOn: boolean }) {
   const currentBeat = usePlayer((s) => s.currentBeat)
-  return <ChordStrip chords={chords} beats={beats} currentBeat={practiceOn ? -1 : currentBeat} />
+  return <ChordStrip chords={chords} currentBeat={practiceOn ? -1 : currentBeat} />
 }
 
 /** Pianorullen — bare avspillingslinja flytter seg (PianoRoll memoiserer resten). */

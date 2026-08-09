@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { MAX_FRET, TUNING_FOR } from './guitar/fretting.ts'
+import { MAX_FRET, TUNING_FOR } from './fretted/fretting.ts'
 import type { Instrument } from '@/types/lick'
 
 // Strict validation for lick data at seed / submission time. PLAN §7:

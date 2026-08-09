@@ -119,7 +119,6 @@ export function GlossaryBrowser() {
       if (saved.expanded.length > 0) setExpanded(new Set(saved.expanded))
     }
     hydratedRef.current = true
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Lagre søk + ekspanderte (Set→array) ved hver endring når hydrert.
@@ -141,7 +140,6 @@ export function GlossaryBrowser() {
       window.removeEventListener('hashchange', fromHash)
       if (highlightTimer.current) clearTimeout(highlightTimer.current)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ── Søk med ≤3 treff ekspanderer treffene ──────────────────────────────────

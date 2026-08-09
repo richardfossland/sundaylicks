@@ -8,11 +8,12 @@ const EPS = 1e-6
 
 interface Props {
   chords: LickChord[] // already transposed (roots are pitch classes)
-  beats: number
   currentBeat: number
 }
 
-export function ChordStrip({ chords, beats, currentBeat }: Props) {
+// NB: stripa la ut akkordene som like flex-celler og leste aldri licken sin
+// taktlengde — `beats` var en ubrukt prop hos alle tre kallerne og er fjernet.
+export function ChordStrip({ chords, currentBeat }: Props) {
   if (chords.length === 0) return null
   return (
     <div className="scroll-x rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2">

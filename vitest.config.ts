@@ -11,6 +11,10 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    // `.tsx` er med i mønsteret slik at en komponenttest som legges ved siden
+    // av komponenten faktisk PLUKKES OPP. (Å kjøre en slik test krever i
+    // tillegg et DOM-miljø — det er ikke satt opp enda; glob-en er bare
+    // sperren som er fjernet, ikke en invitasjon til å teste render.)
+    include: ["src/**/*.test.{ts,tsx}"],
   },
 });

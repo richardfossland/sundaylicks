@@ -10,7 +10,7 @@ import {
   fretboardLayout,
   fretPositions,
   type FretPosition,
-} from '@/lib/guitar/fretting'
+} from '@/lib/fretted/fretting'
 import { pitchClass, noteName } from '@/lib/music'
 
 // ── Fretboard — det interaktive gripebrettet (fretted-søskenet til Keyboard) ──
