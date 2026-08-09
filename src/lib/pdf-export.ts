@@ -1,6 +1,6 @@
 import { Renderer, Stave, Voice, Formatter, StaveConnector, Tuplet } from 'vexflow'
 import type { Lick } from '@/types/lick'
-import { transposedNotes } from './transpose'
+import { transposedPlayableNotes } from './transpose'
 import { buildStaveNotes } from './notation'
 import { KEY_NAMES } from './music'
 
@@ -9,7 +9,7 @@ import { KEY_NAMES } from './music'
 // buildStaveNotes() as the on-screen Notation component. Dependency-free.
 
 function renderSvg(lick: Lick, targetKey: number): string {
-  const notes = transposedNotes(lick, targetKey)
+  const notes = transposedPlayableNotes(lick, targetKey)
   const host = document.createElement('div')
   host.style.position = 'fixed'
   host.style.left = '-9999px'

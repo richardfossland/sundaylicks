@@ -36,6 +36,10 @@ const MISS = '#C7534E'
 const EXPECTED = 'var(--color-amber)'
 
 interface Props {
+  /** Vises-filter: posisjonene beregnes ALLTID på hele settet (samme kilde som
+   * TAB-en — N3a fant 225 kombinasjoner der brett og TAB viste ulik fingring
+   * fordi de fikk ulike delmengder), men bare noter i valgt stemme tegnes. */
+  hand?: 'both' | 'L' | 'R'
   /** Transponert + håndfiltrert (tonene som faktisk spilles), hver med `s`. */
   notes: LickNote[]
   currentBeat: number
@@ -54,6 +58,7 @@ interface Props {
 
 function FretboardImpl({
   notes,
+  hand = 'both',
   currentBeat,
   tuning = GUITAR_STANDARD,
   expected,
@@ -73,6 +78,7 @@ function FretboardImpl({
   const activeMap = useMemo(() => {
     const m = new Map<string, { hand: Hand; midi: number }>()
     notes.forEach((n, i) => {
+      if (hand !== 'both' && n.h !== hand) return
       if (n.t - EPS <= currentBeat && currentBeat < n.t + n.d - EPS) {
         const p = positions[i]
         const key = `${p.string}:${p.fret}`
@@ -80,7 +86,7 @@ function FretboardImpl({
       }
     })
     return m
-  }, [notes, positions, currentBeat])
+  }, [notes, positions, currentBeat, hand])
 
   // Vent-modus-mål: map hver forventet MIDI til en posisjon via lickens `s`
   // (gjenbruk note-posisjonen), fallback til bestPosition etter om-fingring.

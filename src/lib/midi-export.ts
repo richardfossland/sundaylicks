@@ -1,5 +1,5 @@
 import type { Lick } from '@/types/lick'
-import { transposedNotes } from './transpose'
+import { transposedPlayableNotes } from './transpose'
 
 // Minimal, dependency-free Standard MIDI File (type 0) writer. Encodes a lick
 // (transposed to targetKey, at the given bpm) as a downloadable .mid.
@@ -32,7 +32,7 @@ interface Ev {
 
 /** Build the .mid bytes for a lick at a given key/tempo. */
 export function lickToMidi(lick: Lick, targetKey: number, bpm: number): Uint8Array {
-  const notes = transposedNotes(lick, targetKey)
+  const notes = transposedPlayableNotes(lick, targetKey)
   const evs: Ev[] = []
   for (const n of notes) {
     const on = Math.round(n.t * PPQ)
