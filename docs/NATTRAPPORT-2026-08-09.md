@@ -76,11 +76,28 @@ RENT: zod før alle DB-kall + ekstra body-nøkler strippes (ingen privilege esca
 
 ## N4 — Fikser
 
-_(fylles ut)_
+- **#51 (merget) — Innhold:** 35 moll-moduser (Krydre-moll gikk fra 13 treff til fullt utvalg), 2 transponerings-glipp i venstrehender (worship-pulse-d −2, gospel-worship-flow-db −1), 85 fysiske umuligheter trimmet, 5 akkord-etiketter, navneduplikat. + `seed-integrity.test.ts` (4 vakthund-klasser) som umiddelbart fanget 3 rest-tilfeller fikseren bommet på. **⚠️ Krever reseed ved deploy.**
+- **#52 (merget) — Motor-skjøter:** stum-bytte-feilen (setInstrument bygger nå noden, m/ in-flight-dedup), lyd-eierskap i motoren (reel/oppslagsverk/spill spiller gitar/bass-licks med riktig lyd), hand/bandMode-reset ved lick-bytte, A-B-loop-lekkasjen, loop én-skriver, dagens-økt ut av render, progress-skriving til idle, AppShell-rekkefølgen eksplisitt (pageOverrideActive). +8 tester.
+- **#53 (merget) — Render-ytelse:** playhead-abonnement kun i løv-komponenter, Fretboard+PianoRoll statiske lag memoisert, memo(LickCard)+memo(ReelCard) m/ ref-stabil onReplay, practiced-Set, useDeferredValue på søket, fetchLicks 5-min-cache, demo-abonnement gatet.
+- **#54 (merget) — Transponerings-invarianten (nattas viktigste):** oktav-folding i transponerings-laget → lyd og bilde ALLTID enige; 112 feil-tegnede kombinasjoner + vent-modus-blindveiene borte; felles fingering brett↔TAB (225 avvik borte); vakthund over alle 75 fretted licks × 12 tonearter.
+- **#55 (merget) — API-herding:** /api/submit har nå kroppsvakt (64 kB → 413 før parsing), globalt døgntak (100 → 429 + Retry-After) og per-innsender-tak (10/døgn; innsendinger uten id deler én bøtte så taket ikke kan omgås); rå Postgres-feil logges serverside og klienten får generisk melding (slug-kollisjon får ett nytt forsøk); admin-passordsjekken er konstant-tid over SHA-256-digester + 300 ms straff ved feil; approve OG delete gir 404 på 0 rader (delete-hullet var udokumentert — arbeideren fant det selv); identity.ts tåler blokkert lagring (Safari privat); dataeksporten samler nå ALT under sundaylicks_-prefikset (v2) så eksport og nullstilling er enige. Ny ren rate-limit-helper m/ egne tester. 344 → 370 tester.
 
-## N5 — Rekkverk (ESLint, tester, hygiene)
 
-_(fylles ut)_
+Kreditt-taket drepte alle tre F-arbeiderne ~kl. 08 (F1 nesten ferdig → Fable fullførte/merget; F2 halvveis → Fable løste Practice-konflikten mot #52 og fullførte /ove-, /bla-, cache- og demo-punktene; F4 urørt → relansert etter reset).
+
+## N5 — Rekkverk (ESLint, tester, hygiene) ✅ (PR #56, merget)
+
+- **ESLint fra null** (repoet hadde INGEN linter etter ~40 agent-PR-er): flat config m/ eslint-config-next, `--max-warnings=0`, inn i `npm run check` (= CI-gaten). 49 funn → 0: 5 autofiks (avslørte at 5 av 7 gamle disable-kommentarer ikke undertrykte noe lenger), 9 håndfikser (ubrukte imports/props; PianoRoll hadde en overflødig memo-dep som brøt memoiseringen på 60 Hz-laget), 3 React-Compiler-regler skrudd av med begrunnelse (appen kompileres ikke med React Compiler; egen oppfølgingsoppgave er meldt).
+- **+66 tester** på kjernebibliotekene (music.ts m/ 25 importører, transpose.ts, licks.ts fallback/cache) — **mutasjonstestet**: 4 bevisste brekkasjer ga nøyaktig forventet feil. vitest-glob åpnet for `.test.tsx`.
+- **Katalog som ikke lyver:** `lib/guitar/` → `lib/fretted/` (BASS_EADG bodde i «guitar»; 9 importører, .ts-endelser bevart), død PathCard.tsx slettet, foreldet backfill-metadata.mjs slettet (stille brukket siden alltid — rot-årsaken til moll-modus-feilen), wrangler compatibility_date 2025-05-05 → 2026-07-01, `.nvmrc`+engines (CI leser nå .nvmrc).
+- Seed-grafen BEVIST lastbar under Nodes type-stripping (alle 328 licks validert, ingen DB-tilgang).
+- Avvik: generator-scriptene (gen_gitar/gen_bass.py) var alt slettet fra scratchpaden før arkivering — invariantene deres lever i seed-similarity- og fretted-testene.
+
+## Sluttbevis (N6, main `773e5db`)
+
+- `npm run check`: **439 tester grønne + lint rent** (natta startet på 336)
+- `npm run cf:build`: grønn. Chunk-profil: 959 KB (Tone.js) | 429 KB (korpus, **lazy** — refereres ikke av noen prerendret HTML) | 291 KB — mot førbildets 982+784 KB i første-last.
+- Prod er URØRT hele natta (v`6fb57d35` fra i går kveld ruller fortsatt).
 
 ## Venter på eier (morgen)
 
