@@ -34,6 +34,9 @@ export function DailyCard({ licks, progress }: { licks: Lick[]; progress: Progre
   const [streak, setStreak] = useState(0)
 
   useEffect(() => {
+    // Biblioteket lastes asynkront; uten denne vakten ville vi lagret en tom
+    // dagsøkt i localStorage før licks kom inn.
+    if (licks.length === 0) return
     const key = todayKey()
     const session = getOrCreateDailySession(key, licks, progress)
     recordDailyCompletion(key, progress)

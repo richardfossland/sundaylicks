@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { ChevronDown, Plus, X } from 'lucide-react'
 import type { Difficulty, Genre, Lick } from '@/types/lick'
-import { FALLBACK_LICKS, fetchLicks } from '@/lib/licks'
+import { fetchLicks } from '@/lib/licks'
 import { useCollections } from '@/lib/collections'
 import { useSession } from '@/lib/session'
 import { LickCard } from '@/components/LickCard'
@@ -102,7 +102,8 @@ export function KrydreTab() {
   const sessionKey = useSession((s) => s.key)
   const loadCollections = useCollections((s) => s.load)
 
-  const [licks, setLicks] = useState<Lick[]>(FALLBACK_LICKS)
+  const [licks, setLicks] = useState<Lick[]>([])
+  const [licksLoaded, setLicksLoaded] = useState(false)
   const [genre, setGenre] = useState<Genre | 'all'>('all')
   const [level, setLevel] = useState<TransitionLevel>('intermediate')
   const [progression, setProgression] = useState<ProgressionStep[]>([])
@@ -123,7 +124,9 @@ export function KrydreTab() {
   useEffect(() => {
     let alive = true
     fetchLicks().then((rows) => {
-      if (alive) setLicks(rows)
+      if (!alive) return
+      setLicks(rows)
+      setLicksLoaded(true)
     })
     loadCollections()
     return () => {
@@ -411,7 +414,17 @@ export function KrydreTab() {
 
       {/* Optional: the library, re-projected into the current key */}
       <Collapsible title={`Bla i biblioteket i ${keyLabel}`} open={showLibrary} onToggle={setShowLibrary}>
-        {groups.length === 0 ? (
+        {!licksLoaded ? (
+          // Skjelett mens biblioteket lastes, ellers blinker «ingen treff».
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 4 }, (_, i) => (
+              <div
+                key={i}
+                className="h-40 animate-pulse rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
+              />
+            ))}
+          </div>
+        ) : groups.length === 0 ? (
           <p className="text-[var(--color-muted)]">Ingen bibliotek-treff for disse filtrene i {keyLabel} — prøv «Alle» sjangre.</p>
         ) : (
           groups.map((g) => (

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Heart, ListMusic, Flame } from 'lucide-react'
 import type { Lick, Genre, Difficulty } from '@/types/lick'
-import { FALLBACK_LICKS, fetchLicks } from '@/lib/licks'
+import { fetchLicks } from '@/lib/licks'
 import { getProgress, todayKey, type Progress } from '@/lib/progress'
 import { computeStreak, loadDaily } from '@/lib/daily'
 import { useCollections } from '@/lib/collections'
@@ -12,7 +12,8 @@ import { GENRE_LABEL, GENRE_ORDER, DIFFICULTY_LABEL } from '@/lib/labels'
 import { AppShell } from '@/components/AppShell'
 
 export default function StatsPage() {
-  const [licks, setLicks] = useState<Lick[]>(FALLBACK_LICKS)
+  const [licks, setLicks] = useState<Lick[]>([])
+  const [licksLoaded, setLicksLoaded] = useState(false)
   const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {}, lastPracticed: {} })
   const [streak, setStreak] = useState(0)
   const favorites = useCollections((s) => s.favorites)
@@ -21,7 +22,11 @@ export default function StatsPage() {
 
   useEffect(() => {
     let alive = true
-    fetchLicks().then((r) => alive && setLicks(r))
+    fetchLicks().then((r) => {
+      if (!alive) return
+      setLicks(r)
+      setLicksLoaded(true)
+    })
     setProgress(getProgress())
     setStreak(computeStreak(loadDaily().completedDates, todayKey()))
     load()
@@ -65,7 +70,7 @@ export default function StatsPage() {
         <h1 className="font-display text-4xl text-[var(--color-ivory)]">Din fremgang</h1>
         <p className="mt-2 text-[var(--color-muted)]">Lagret lokalt på denne enheten.</p>
 
-        {stats.practicedCount === 0 && (
+        {licksLoaded && stats.practicedCount === 0 && (
           <div className="mt-6 rounded-2xl border border-[var(--color-amber)]/30 bg-[var(--color-amber)]/8 p-5">
             <p className="font-display text-lg text-[var(--color-ivory)]">Du har ikke øvd noen licks enda</p>
             <p className="mt-1 text-sm text-[var(--color-muted)]">Når du øver en lick, dukker fremgangen din opp her.</p>
@@ -80,7 +85,12 @@ export default function StatsPage() {
 
         {/* Overall + collections */}
         <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <Stat big label="Øvd" value={`${stats.practicedCount}/${stats.total}`} sub={`${pct}%`} />
+          <Stat
+            big
+            label="Øvd"
+            value={licksLoaded ? `${stats.practicedCount}/${stats.total}` : '–'}
+            sub={licksLoaded ? `${pct}%` : undefined}
+          />
           <Stat label="Streak" value={`${streak}`} sub={streak === 1 ? 'dag' : 'dager'} icon={<Flame className="h-4 w-4" />} />
           <Stat label="Favoritter" value={String(favorites.length)} icon={<Heart className="h-4 w-4" />} />
           <Stat label="Lister" value={String(lists.length)} icon={<ListMusic className="h-4 w-4" />} />
@@ -89,18 +99,26 @@ export default function StatsPage() {
         {/* Genre coverage */}
         <Section title="Dekning per sjanger">
           <div className="flex flex-col gap-2.5">
-            {stats.byGenre.map(({ g, total, done }) => (
-              <Bar key={g} label={GENRE_LABEL[g as Genre]} done={done} total={total} />
-            ))}
+            {licksLoaded ? (
+              stats.byGenre.map(({ g, total, done }) => (
+                <Bar key={g} label={GENRE_LABEL[g as Genre]} done={done} total={total} />
+              ))
+            ) : (
+              <BarSkeleton rows={4} />
+            )}
           </div>
         </Section>
 
         {/* Difficulty */}
         <Section title="Per nivå">
           <div className="flex flex-col gap-2.5">
-            {stats.byDiff.map(({ d, total, done }) => (
-              <Bar key={d} label={DIFFICULTY_LABEL[d]} done={done} total={total} />
-            ))}
+            {licksLoaded ? (
+              stats.byDiff.map(({ d, total, done }) => (
+                <Bar key={d} label={DIFFICULTY_LABEL[d]} done={done} total={total} />
+              ))
+            ) : (
+              <BarSkeleton rows={3} />
+            )}
           </div>
         </Section>
 
@@ -160,6 +178,21 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="mb-3 font-display text-2xl text-[var(--color-ivory)]">{title}</h2>
       {children}
     </section>
+  )
+}
+
+/** Pulserende plassholder mens biblioteket lastes (samme idiom som /bla). */
+function BarSkeleton({ rows }: { rows: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="flex items-center gap-3">
+          <div className="h-3.5 w-28 shrink-0 animate-pulse rounded bg-[var(--color-raised)]" />
+          <div className="h-2.5 flex-1 animate-pulse rounded-full bg-[var(--color-raised)]" />
+          <div className="h-3.5 w-12 shrink-0 animate-pulse rounded bg-[var(--color-raised)]" />
+        </div>
+      ))}
+    </>
   )
 }
 

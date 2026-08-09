@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
 import type { Lick } from '@/types/lick'
-import { FALLBACK_LICKS, fetchLicks } from '@/lib/licks'
+import { fetchLicks } from '@/lib/licks'
 import { getProgress, type Progress } from '@/lib/progress'
 import { useSession } from '@/lib/session'
 import { KEY_NAMES } from '@/lib/music'
@@ -37,7 +37,10 @@ const Onboarding = dynamic(() => import('@/components/onboarding/Onboarding').th
  */
 export default function LauncherPage() {
   const router = useRouter()
-  const [licks, setLicks] = useState<Lick[]>(FALLBACK_LICKS)
+  // Biblioteket starter tomt og fylles av effekten under; seed-korpuset ligger
+  // ikke lenger i klient-bunten, så det finnes ingen synkron startverdi.
+  const [licks, setLicks] = useState<Lick[]>([])
+  const [licksLoaded, setLicksLoaded] = useState(false)
   const [progress, setProgress] = useState<Progress>({ practiced: [], bestBpm: {}, lastPracticed: {} })
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -48,7 +51,9 @@ export default function LauncherPage() {
   useEffect(() => {
     let alive = true
     fetchLicks().then((rows) => {
-      if (alive) setLicks(rows)
+      if (!alive) return
+      setLicks(rows)
+      setLicksLoaded(true)
     })
     const prog = getProgress()
     setProgress(prog)
@@ -105,10 +110,12 @@ export default function LauncherPage() {
       (p) => computeCourseProgress(p, progress.practiced).status === 'done',
     ).length
     return {
-      ove: `${practicedCount} av ${licks.length} licks øvd`,
+      // Vent med øvd-tellinga til biblioteket faktisk er lastet — ellers ville
+      // kortet blinket «0 av 0 licks øvd» før dataene kom.
+      ...(licksLoaded ? { ove: `${practicedCount} av ${licks.length} licks øvd` } : {}),
       kurs: `${coursesDone} av ${CURATED_PATHS.length} kurs fullført`,
     }
-  }, [mounted, licks, progress.practiced])
+  }, [mounted, licks, licksLoaded, progress.practiced])
 
   const keyLabel = `${KEY_NAMES[sessionKey.root]}${sessionKey.mode === 'minor' ? '-moll' : '-dur'}`
   const hasContinueData = Boolean(lastLick || inProgressPath)
