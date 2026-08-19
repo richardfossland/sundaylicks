@@ -21,17 +21,17 @@
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
-    "@supabase/supabase-js": "^2.108.1",
+    "@supabase/supabase-js": "^2.112.3",
     "clsx": "^2.1.1",
-    "lucide-react": "^1.28.0",
-    "next": "16.3.0",
+    "lucide-react": "^1.31.0",
+    "next": "16.3.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "tailwind-merge": "^3.6.0",
     "tone": "^15.0.4",
     "vexflow": "^4.2.5",
     "zod": "^4.4.3",
-    "zustand": "^5.0.2"
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.20.2",
@@ -40,10 +40,10 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^16.3.0",
+    "eslint-config-next": "^16.3.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10",
-    "wrangler": "^4.119.0"
+    "wrangler": "^4.123.0"
   }
 }
